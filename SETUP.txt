@@ -1,0 +1,48 @@
+EWE ESTIMATOR - SETUP (Android, about 15 minutes, one time)
+
+You make two repositories on GitHub:
+  earthwrx-estimator  = the app itself (Public, so your phone can open it)
+  earthwrx-jobs       = where your saved estimates go (Private, only you see it)
+
+A. PUT THE APP ON GITHUB
+1. github.com > tap + (top right) > New repository.
+   Name: earthwrx-estimator   Public   > Create repository.
+2. Tap "uploading an existing file". Upload ALL of these:
+   index.html, manifest.webmanifest, sw.js, icon-192.png, icon-512.png,
+   apple-touch-icon.png, favicon-32.png   > Commit changes.
+3. Settings > Pages > Branch: main, folder: / (root) > Save.
+4. Wait 1-2 minutes. Your app address is:
+   https://YOUR-USERNAME.github.io/earthwrx-estimator/
+
+B. MAKE THE JOBS REPOSITORY
+5. + > New repository. Name: earthwrx-jobs   PRIVATE
+   Tick "Add a README file" > Create repository.
+
+C. MAKE A TOKEN (this is the app's key to the jobs repository only)
+6. Tap your picture > Settings > Developer settings (bottom of the list)
+   > Personal access tokens > Fine-grained tokens > Generate new token.
+7. Token name: EWE phone.  Expiration: pick the longest offered.
+   Repository access: Only select repositories > earthwrx-jobs.
+   Permissions > Repository permissions > Contents: Read and write.
+   > Generate token. COPY IT NOW (GitHub only shows it once).
+
+D. PUT IT ON YOUR PHONE
+8. Open your app address in Chrome > tap the 3 dots > Add to Home screen
+   (or Install app). The black EWE icon shows up.
+9. Open the app > Saved Jobs tab > GitHub box:
+   username, earthwrx-jobs, paste the token > Connect and test.
+   You should see "Connected".
+
+USING IT
+- Tap Save: it saves on the phone, then to GitHub (needs signal).
+- No signal? It still saves on the phone. Tap "Pull from GitHub" later and it catches up.
+- On another phone or computer: open the same app address, fill in the GitHub box,
+  tap Pull from GitHub. All your jobs come down.
+
+IF THE PHONE IS LOST
+- On github.com: Settings > Developer settings > Fine-grained tokens > delete "EWE phone".
+  The token only opens earthwrx-jobs, nothing else on your account.
+
+UPDATES FROM CLAUDE
+- Upload the new index.html to earthwrx-estimator (replace the old one).
+  Your jobs are not touched.

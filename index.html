@@ -1,0 +1,871 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#101010">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="EWE">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="favicon-32.png">
+<title>EarthWrx Estimator</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Layout: job-sheet header, sticky tab strip, one work panel per tab with inputs above a big result plate */
+:root{
+  --bg:#eceeec; --panel:#ffffff; --fg:#1b1f1e; --muted:#5d6663; --line:#d3d8d5;
+  --machine:#f2b705; --on-machine:#1b1f1e; --clay:#a8432a; --topsoil:#5a4632; --stone:#6b7479; --iron:#2f5d73; --conc:#8a8f86;
+  --field:#f6f7f6; --warn:#b5560b;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#131615; --panel:#1d2221; --fg:#eef1ef; --muted:#9aa4a0; --line:#323a38;
+  --machine:#f5bf1f; --on-machine:#141615; --clay:#e0704f; --topsoil:#c9a27a; --stone:#a8b2b6; --iron:#6fb0cc; --conc:#b9bdb4;
+  --field:#161a19; --warn:#f0954a; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#131615; --panel:#1d2221; --fg:#eef1ef; --muted:#9aa4a0; --line:#323a38;
+  --machine:#f5bf1f; --on-machine:#141615; --clay:#e0704f; --topsoil:#c9a27a; --stone:#a8b2b6; --iron:#6fb0cc; --conc:#b9bdb4;
+  --field:#161a19; --warn:#f0954a; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.45;margin:0}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--fg)}
+.wrap{max-width:720px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{background:var(--fg);color:var(--bg)}
+header .wrap{padding-block:18px 14px}
+.brand{font-family:var(--display);font-weight:800;font-size:2rem;letter-spacing:.04em;line-height:1;margin:0;text-wrap:balance}
+.brand span{color:var(--machine)}
+.sub{font-family:var(--display);font-weight:600;letter-spacing:.14em;font-size:.95rem;margin-top:4px;opacity:.85}
+nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--fg);border-bottom:4px solid var(--machine)}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-block:8px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:1 0 auto;min-height:48px;padding:6px 14px;border:0;border-radius:6px;background:transparent;color:var(--bg);opacity:.75;
+  font-family:var(--display);font-weight:700;font-size:1.05rem;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.tab[aria-selected="true"]{background:var(--machine);color:var(--on-machine);opacity:1}
+.tab:focus-visible{outline:3px solid var(--machine);outline-offset:2px}
+main .wrap{padding-block:18px 40px;display:grid;gap:16px}
+section{display:grid;gap:16px}
+h2{font-family:var(--display);font-weight:700;font-size:1.6rem;letter-spacing:.03em;margin:0;text-transform:uppercase;display:flex;align-items:center;gap:10px}
+h2 i{width:14px;height:14px;border-radius:3px;display:inline-block}
+h3{font-family:var(--display);font-weight:700;font-size:1.05rem;letter-spacing:.1em;margin:4px 0 0;text-transform:uppercase;color:var(--muted)}
+.lead{margin:0;color:var(--muted);max-width:62ch}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;display:grid;gap:14px;min-width:0}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px}
+.fields.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+label{display:grid;gap:6px;font-weight:600;font-size:.95rem;align-content:start;min-width:0}
+label small{font-weight:400;color:var(--muted);font-size:.82rem}
+.inp{display:flex;align-items:stretch;border:2px solid var(--line);border-radius:8px;background:var(--field);overflow:hidden}
+.inp:focus-within{border-color:var(--machine)}
+.inp input{flex:1;min-width:0;width:100%;border:0;background:transparent;color:var(--fg);font:600 1.35rem var(--body);padding:10px 12px;font-variant-numeric:tabular-nums}
+.inp input::placeholder{color:var(--muted);font-weight:500}
+.inp input:focus{outline:none}
+.inp b{display:flex;align-items:center;padding:0 10px;background:var(--line);color:var(--fg);font-family:var(--display);font-weight:700;letter-spacing:.05em;font-size:.9rem;white-space:nowrap}
+select{width:100%;min-height:50px;border:2px solid var(--line);border-radius:8px;background:var(--field);color:var(--fg);font:600 1.05rem var(--body);padding:8px 10px}
+select:focus{outline:none;border-color:var(--machine)}
+.plate{border-radius:10px;padding:16px;background:var(--fg);color:var(--bg);display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px}
+.stat{display:grid;gap:2px;min-width:0}
+.stat .k{font-family:var(--display);font-weight:600;letter-spacing:.12em;text-transform:uppercase;font-size:.85rem;opacity:.75}
+.stat .v{font-family:var(--display);font-weight:800;font-size:2.3rem;line-height:1.05;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.stat .v small{font-size:1rem;font-weight:700;margin-left:4px;opacity:.8}
+.stat.hot .v{color:var(--machine)}
+details{color:var(--muted);font-size:.9rem}
+details summary{cursor:pointer;font-weight:600;color:var(--fg)}
+details p{margin:8px 0 0}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.tbl{overflow-x:auto}
+th,td{text-align:right;padding:10px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font-family:var(--display);letter-spacing:.08em;text-transform:uppercase;font-size:.85rem;color:var(--muted);font-weight:700}
+tr.sum td{font-weight:700;border-top:2px solid var(--fg);border-bottom:0}
+.swatch{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:8px}
+.note{font-size:.85rem;color:var(--muted);margin:0}
+.note.warn{color:var(--warn);font-weight:600}
+.row-btn{display:flex;flex-wrap:wrap;gap:10px}
+.btn{min-height:48px;padding:0 18px;border-radius:8px;border:2px solid var(--fg);background:transparent;color:var(--fg);font-family:var(--display);font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:1rem;cursor:pointer}
+.btn.primary{background:var(--machine);border-color:var(--machine);color:var(--on-machine)}
+.btn.small{min-height:40px;padding:0 14px;font-size:.9rem;border-width:1px;justify-self:start}
+.btn:focus-visible,.chip:focus-visible{outline:3px solid var(--machine);outline-offset:2px}
+.flag{display:inline-block;font-size:.78rem;font-weight:600;padding:2px 8px;border-radius:99px;background:var(--machine);color:var(--on-machine)}
+.pill{display:inline-block;font-size:.78rem;font-weight:700;padding:2px 8px;border-radius:99px;border:1px solid var(--warn);color:var(--warn);margin-left:6px;font-family:var(--body)}
+
+/* equipment list */
+.mlist{display:grid;border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden}
+.grp{padding:10px 14px 4px;font-family:var(--display);font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:.85rem;color:var(--muted);background:var(--field);border-bottom:1px solid var(--line)}
+.mach{border-bottom:1px solid var(--line);padding:10px 14px;display:grid;gap:10px}
+.mach:last-child{border-bottom:0}
+.mrow{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;min-height:40px}
+.mach.off .mtitle,.mach.off .mres{opacity:.5}
+.mach.off .mf{display:none}
+.mtitle{font-weight:600;font-size:1.02rem;min-width:0}
+.sw{position:relative;width:48px;height:28px;display:block}
+.sw input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;z-index:1}
+.sw span{position:absolute;inset:0;border-radius:99px;background:var(--line);transition:background .15s}
+.sw span::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:var(--panel);box-shadow:0 1px 2px rgba(0,0,0,.3);transition:transform .15s}
+.sw input:checked+span{background:var(--machine)}
+.sw input:checked+span::after{transform:translateX(20px)}
+.sw input:focus-visible+span{outline:3px solid var(--machine);outline-offset:2px}
+.mres{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--display);font-weight:700;font-size:1.2rem}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+
+/* drill rows */
+.drill{border:1px solid var(--line);border-left:6px solid var(--conc);border-radius:10px;background:var(--panel);padding:14px;display:grid;gap:12px;min-width:0}
+.drill h4{margin:0;font-family:var(--display);font-size:1.25rem;letter-spacing:.05em;text-transform:uppercase}
+.dres{font-size:.92rem;color:var(--muted);font-variant-numeric:tabular-nums;margin:0}
+.dres b{color:var(--fg)}
+
+/* trips */
+.addrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.trip{border:1px solid var(--line);border-left:6px solid var(--iron);border-radius:10px;background:var(--panel);padding:14px;display:grid;gap:12px;min-width:0}
+.trip-h{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}
+.tcost{font-family:var(--display);font-weight:800;font-size:1.6rem;font-variant-numeric:tabular-nums}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:40px;padding:6px 12px;border-radius:99px;border:1px solid var(--line);background:var(--field);color:var(--fg);font:500 .92rem var(--body);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--iron);border-color:var(--iron);color:var(--panel);font-weight:600}
+.empty{padding:16px;border:2px dashed var(--line);border-radius:10px;color:var(--muted);text-align:center}
+
+/* job bar + saved jobs */
+.jobbar{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;margin-top:12px}
+.jobbar .jn{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.9}
+.jobbar .jn em{font-style:normal;opacity:.6}
+.savebtn{min-height:44px;padding:0 18px;border-radius:8px;border:0;background:var(--machine);color:var(--on-machine);font-family:var(--display);font-weight:800;letter-spacing:.08em;text-transform:uppercase;font-size:1.05rem;cursor:pointer}
+.savebtn:focus-visible{outline:3px solid var(--bg);outline-offset:2px}
+.status{font-size:.9rem;font-weight:600;margin:0;min-height:1.3em}
+.status.ok{color:var(--iron)}
+.status.bad{color:var(--warn)}
+.jlist{display:grid;border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden}
+.jrow{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line)}
+.jrow:last-child{border-bottom:0}
+.jrow.cur{background:var(--field);box-shadow:inset 4px 0 0 var(--machine)}
+.jrow .jt{font-weight:700;font-size:1.05rem;overflow-wrap:anywhere}
+.jrow .jm{font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.jrow .jb{display:flex;gap:8px}
+.jrow .jtot{font-family:var(--display);font-weight:800;font-size:1.2rem;font-variant-numeric:tabular-nums}
+textarea{width:100%;min-height:80px;border:2px solid var(--line);border-radius:8px;background:var(--field);color:var(--fg);font:500 1rem var(--body);padding:10px 12px;resize:vertical}
+textarea:focus,.txt:focus{outline:none;border-color:var(--machine)}
+.txt{width:100%;min-height:50px;border:2px solid var(--line);border-radius:8px;background:var(--field);color:var(--fg);font:600 1.1rem var(--body);padding:10px 12px}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);background:#1b1f1e}
+[hidden]{display:none!important}
+img{max-width:100%}
+</style>
+
+</head>
+<body>
+<header><div class="wrap">
+  <h1 class="brand">EARTHWRX <span>EXCAVATING</span></h1>
+  <div class="sub">ESTIMATING ROAD BUILD</div>
+  <div class="jobbar"><span class="jn" id="jobname"><em>Unsaved estimate</em></span><button class="savebtn" id="savetop">Save</button></div>
+</div></header>
+
+<nav><div class="wrap"><div class="tabs" role="tablist" id="tabs">
+  <button class="tab" role="tab" data-t="jobs" id="t-jobs">Saved Jobs</button>
+  <button class="tab" role="tab" data-t="road" id="t-road">Road Size</button>
+  <button class="tab" role="tab" data-t="top" id="t-top">Topsoil</button>
+  <button class="tab" role="tab" data-t="clay" id="t-clay">Cut to Clay</button>
+  <button class="tab" role="tab" data-t="stone" id="t-stone">Stone</button>
+  <button class="tab" role="tab" data-t="trucks" id="t-trucks">Haul Off</button>
+  <button class="tab" role="tab" data-t="equip" id="t-equip">Equipment</button>
+  <button class="tab" role="tab" data-t="poles" id="t-poles">Pole Bases</button>
+  <button class="tab" role="tab" data-t="lowboy" id="t-lowboy">Lowboys</button>
+  <button class="tab" role="tab" data-t="totals" id="t-totals">Totals</button>
+</div></div></nav>
+
+<main><div class="wrap" id="panels">
+
+<!-- SAVED JOBS -->
+<section data-p="jobs" hidden>
+  <div class="card">
+    <h2>This Estimate</h2>
+    <div class="fields">
+      <label>Job name<input class="txt" id="jName" type="text" autocomplete="off" placeholder="e.g. Miller farm lane"></label>
+      <label>Location or customer<input class="txt" id="jPlace" type="text" autocomplete="off" placeholder="Optional"></label>
+    </div>
+    <label>Notes<textarea id="jNotes" placeholder="Anything to remember about this job"></textarea></label>
+    <div class="row-btn">
+      <button class="btn primary" id="saveBtn">Save estimate</button>
+      <button class="btn" id="saveCopy">Save as new job</button>
+      <button class="btn" id="newBtn">Start new estimate</button>
+    </div>
+    <p class="status" id="saveStatus" aria-live="polite"></p>
+  </div>
+  <div class="row-btn" style="align-items:center;justify-content:space-between">
+    <h3 id="listHead">Saved jobs</h3>
+    <button class="btn small" id="syncBtn">Pull from GitHub</button>
+  </div>
+  <p class="status" id="syncStatus" aria-live="polite"></p>
+  <div id="jlist" class="jlist"></div>
+
+  <div class="card">
+    <h3>GitHub</h3>
+    <p class="note">Every save goes to your phone first, then up to GitHub. Pull from GitHub brings down anything saved on another phone or computer. Fill this in once.</p>
+    <div class="fields">
+      <label>GitHub username<input class="txt" id="ghOwner" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="your-username"></label>
+      <label>Jobs repository<input class="txt" id="ghRepo" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="earthwrx-jobs"></label>
+    </div>
+    <label>Access token<input class="txt" id="ghToken" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_…"><small>Make it a fine-grained token for the jobs repository only, with Contents set to Read and write. It stays on this phone.</small></label>
+    <div class="row-btn">
+      <button class="btn primary" id="ghSave">Connect and test</button>
+      <button class="btn" id="ghForget">Disconnect</button>
+    </div>
+    <p class="status" id="ghStatus" aria-live="polite"></p>
+  </div>
+
+  <div class="card">
+    <h3>Backup file</h3>
+    <p class="note">An extra copy you can text or email to yourself.</p>
+    <div class="row-btn">
+      <button class="btn" id="backupBtn">Back up all jobs</button>
+      <label class="btn" style="display:inline-flex;align-items:center;cursor:pointer" for="restoreFile">Restore from backup</label>
+      <input type="file" id="restoreFile" accept=".json,application/json" hidden>
+    </div>
+    <p class="status" id="backupStatus" aria-live="polite"></p>
+  </div>
+</section>
+
+<!-- ROAD -->
+<section data-p="road">
+  <div class="card">
+    <h2>Road Size</h2>
+    <p class="lead">Enter the road once here. Every other tab uses these numbers. <span class="flag" id="exflag">Example numbers loaded</span></p>
+    <div class="fields">
+      <label>Length<div class="inp"><input id="len" inputmode="decimal" type="number" step="any"><b>FT</b></div><small>5,280 ft = 1 mile</small></label>
+      <label>Width<div class="inp"><input id="wid" inputmode="decimal" type="number" step="any"><b>FT</b></div><small>Include shoulders if you dig them</small></label>
+    </div>
+    <div class="plate">
+      <div class="stat"><span class="k">Road area</span><span class="v" id="o-area">0<small>sq ft</small></span></div>
+      <div class="stat"><span class="k">Square yards</span><span class="v" id="o-sqyd">0<small>sq yd</small></span></div>
+    </div>
+    <div class="row-btn"><button class="btn primary" data-go="top">Next: Topsoil</button><button class="btn" id="reset">Clear job numbers</button></div>
+    <p class="note">Clearing keeps your rates, prices and trailer settings.</p>
+  </div>
+</section>
+
+<!-- TOPSOIL -->
+<section data-p="top" hidden>
+  <div class="card">
+    <h2><i style="background:var(--topsoil)"></i>Topsoil Strip</h2>
+    <p class="lead">How deep the topsoil goes before you hit good ground.</p>
+    <div class="fields">
+      <label>Topsoil depth<div class="inp"><input id="topD" inputmode="decimal" type="number" step="any"><b>IN</b></div></label>
+      <label>Swell in truck<div class="inp"><input id="topSw" inputmode="decimal" type="number" step="any"><b>%</b></div><small>Typical 20–30%</small></label>
+      <label>Weight<div class="inp"><input id="topW" inputmode="decimal" type="number" step="any"><b>T/YD</b></div><small>Tons per bank yard, about 1.2</small></label>
+    </div>
+    <div class="plate">
+      <div class="stat hot"><span class="k">Yards dug</span><span class="v" id="o-topB">0<small>yd³</small></span></div>
+      <div class="stat"><span class="k">Yards hauled</span><span class="v" id="o-topL">0<small>yd³</small></span></div>
+      <div class="stat"><span class="k">Tons moved</span><span class="v" id="o-topT">0<small>tons</small></span></div>
+    </div>
+    <details><summary>How this is figured</summary><p>Yards dug = length × width × depth (ft) ÷ 27. Yards hauled adds the swell, because dirt fluffs up once it's loose in the truck. Tons = yards dug × weight.</p></details>
+    <div class="row-btn"><button class="btn primary" data-go="clay">Next: Cut to Clay</button></div>
+  </div>
+</section>
+
+<!-- CLAY -->
+<section data-p="clay" hidden>
+  <div class="card">
+    <h2><i style="background:var(--clay)"></i>Cut to Clay</h2>
+    <p class="lead">Any extra cut below the topsoil into the red clay or subgrade. Put 0 if you stop at the clay.</p>
+    <div class="fields">
+      <label>Cut depth<div class="inp"><input id="clayD" inputmode="decimal" type="number" step="any"><b>IN</b></div></label>
+      <label>Swell in truck<div class="inp"><input id="claySw" inputmode="decimal" type="number" step="any"><b>%</b></div><small>Clay runs 30–40%</small></label>
+      <label>Weight<div class="inp"><input id="clayW" inputmode="decimal" type="number" step="any"><b>T/YD</b></div><small>Tons per bank yard, about 1.5</small></label>
+      <label>Hauling off<div class="inp"><input id="clayOff" inputmode="decimal" type="number" step="any"><b>%</b></div><small>100 = all leaves the job</small></label>
+    </div>
+    <div class="plate">
+      <div class="stat hot"><span class="k">Yards dug</span><span class="v" id="o-clayB">0<small>yd³</small></span></div>
+      <div class="stat"><span class="k">Yards hauled</span><span class="v" id="o-clayL">0<small>yd³</small></span></div>
+      <div class="stat"><span class="k">Tons moved</span><span class="v" id="o-clayT">0<small>tons</small></span></div>
+    </div>
+    <div class="row-btn"><button class="btn primary" data-go="stone">Next: Stone</button></div>
+  </div>
+</section>
+
+<!-- STONE -->
+<section data-p="stone" hidden>
+  <div class="card">
+    <h2><i style="background:var(--stone)"></i>Stone</h2>
+    <p class="lead">Base stone on the bottom, finish stone on top. Depths are compacted depth.</p>
+    <div class="fields">
+      <label>Base stone depth<div class="inp"><input id="baseD" inputmode="decimal" type="number" step="any"><b>IN</b></div><small>Bigger stone, e.g. #3 or #2</small></label>
+      <label>Top stone depth<div class="inp"><input id="finD" inputmode="decimal" type="number" step="any"><b>IN</b></div><small>Crusher run / 2A / #57</small></label>
+      <label>Stone weight<div class="inp"><input id="stW" inputmode="decimal" type="number" step="any"><b>T/YD</b></div><small>About 1.4–1.6; ask your quarry</small></label>
+      <label>Compaction extra<div class="inp"><input id="stC" inputmode="decimal" type="number" step="any"><b>%</b></div><small>Typical 10–20%</small></label>
+    </div>
+    <div class="plate">
+      <div class="stat"><span class="k">Base stone</span><span class="v" id="o-baseT">0<small>tons</small></span></div>
+      <div class="stat"><span class="k">Top stone</span><span class="v" id="o-finT">0<small>tons</small></span></div>
+      <div class="stat hot"><span class="k">Total stone</span><span class="v" id="o-stT">0<small>tons</small></span></div>
+    </div>
+    <div class="row-btn"><button class="btn primary" data-go="trucks">Next: Haul Off</button></div>
+  </div>
+</section>
+
+<!-- HAUL OFF -->
+<section data-p="trucks" hidden>
+  <div class="card">
+    <h2>Haul Off &amp; Stone Prices</h2>
+    <p class="lead">A load counts by whichever fills first, weight or the box. Prices are optional.</p>
+    <div class="fields">
+      <label>Truck payload<div class="inp"><input id="pay" inputmode="decimal" type="number" step="any"><b>TONS</b></div><small>Tri-axle about 20</small></label>
+      <label>Box size<div class="inp"><input id="box" inputmode="decimal" type="number" step="any"><b>YD³</b></div><small>Tri-axle about 16–18</small></label>
+      <label>Dump fee<div class="inp"><input id="pDump" inputmode="decimal" type="number" step="any"><b>$/LOAD</b></div><small>Tipping fee at the dump site</small></label>
+      <label>Stone price<div class="inp"><input id="pStone" inputmode="decimal" type="number" step="any"><b>$/TON</b></div><small>Delivered price</small></label>
+    </div>
+    <div class="plate">
+      <div class="stat hot"><span class="k">Dirt loads out</span><span class="v" id="o-dLoads">0<small>loads</small></span></div>
+      <div class="stat"><span class="k">Stone loads in</span><span class="v" id="o-sLoads">0<small>loads</small></span></div>
+    </div>
+    <p class="note">Use the load count to judge your truck hours on the Equipment tab.</p>
+    <div class="row-btn"><button class="btn primary" data-go="equip">Next: Equipment</button></div>
+  </div>
+</section>
+
+<!-- EQUIPMENT -->
+<section data-p="equip" hidden>
+  <div class="card">
+    <h2><i style="background:var(--machine)"></i>Equipment</h2>
+    <p class="lead">Switch on the machines for this job, then set each one's rate per hour and the hours you expect to run it.</p>
+    <div class="plate">
+      <div class="stat"><span class="k">Machine hours</span><span class="v" id="o-eqH">0<small>hr</small></span></div>
+      <div class="stat hot"><span class="k">Equipment cost</span><span class="v" id="o-eqC">$0</span></div>
+    </div>
+    <p class="note" id="eqhint"></p>
+  </div>
+  <div class="mlist" id="mlist"></div>
+  <p class="note">Pole holes are priced per hole on the Pole Bases tab. Switch the Hole Drilling Machine on here only if you also bill it by the hour. It can still ride on a lowboy trip either way.</p>
+  <div class="row-btn"><button class="btn primary" data-go="poles">Next: Pole Bases</button></div>
+</section>
+
+<!-- POLE BASES -->
+<section data-p="poles" hidden>
+  <div class="card">
+    <h2><i style="background:var(--conc)"></i>Pole Bases</h2>
+    <p class="lead">Light pole holes, priced per hole by drill size. Put 0 holes for any size you won't use.</p>
+    <div class="plate">
+      <div class="stat"><span class="k">Holes</span><span class="v" id="o-pHoles">0</span></div>
+      <div class="stat"><span class="k">Feet drilled</span><span class="v" id="o-pFt">0<small>ft</small></span></div>
+      <div class="stat"><span class="k">Concrete</span><span class="v" id="o-pConc">0<small>yd³</small></span></div>
+      <div class="stat hot"><span class="k">Pole base total</span><span class="v" id="o-pTot">$0</span></div>
+    </div>
+  </div>
+  <div id="drills" style="display:grid;gap:12px"></div>
+
+  <div class="card">
+    <h3>Bit extension</h3>
+    <div class="fields">
+      <label>Bit reaches without extension<div class="inp"><input id="reach" inputmode="decimal" type="number" step="any"><b>FT</b></div><small>Any hole deeper than this uses the extension</small></label>
+      <label>Extension charge<div class="inp"><input id="extFee" inputmode="decimal" type="number" step="any"><b>$/HOLE</b></div><small>Added to each hole that needs it</small></label>
+    </div>
+    <p class="note" id="extnote"></p>
+  </div>
+
+  <div class="card">
+    <h3>Bit changes &amp; crew rate</h3>
+    <div class="fields">
+      <label>Crew rate<div class="inp"><input id="crew" inputmode="decimal" type="number" step="any"><b>$/HR</b></div><small>Used for bit changes and form work</small></label>
+      <label>Time per bit change<div class="inp"><input id="bitMin" inputmode="decimal" type="number" step="any"><b>MIN</b></div></label>
+      <label>Number of bit changes<div class="inp"><input id="bitN" inputmode="decimal" type="number" step="any" placeholder="auto"><b>#</b></div><small>Blank = one per drill size used</small></label>
+    </div>
+    <p class="dres" id="bitres"></p>
+  </div>
+
+  <div class="card">
+    <h3>Concrete form (threaded rod set)</h3>
+    <p class="note">Time for each pole base you pour.</p>
+    <div class="fields">
+      <label>Set up<div class="inp"><input id="fSet" inputmode="decimal" type="number" step="any"><b>MIN</b></div></label>
+      <label>Tear down<div class="inp"><input id="fTear" inputmode="decimal" type="number" step="any"><b>MIN</b></div></label>
+      <label>Clean up<div class="inp"><input id="fClean" inputmode="decimal" type="number" step="any"><b>MIN</b></div></label>
+      <label>Form above ground<div class="inp"><input id="formH" inputmode="decimal" type="number" step="any"><b>IN</b></div><small>Adds to the concrete count</small></label>
+      <label>Concrete price<div class="inp"><input id="pConc" inputmode="decimal" type="number" step="any"><b>$/YD³</b></div><small>Optional</small></label>
+    </div>
+    <p class="dres" id="formres"></p>
+  </div>
+  <div class="row-btn"><button class="btn primary" data-go="lowboy">Next: Lowboys</button></div>
+</section>
+
+<!-- LOWBOYS -->
+<section data-p="lowboy" hidden>
+  <div class="card">
+    <h2><i style="background:var(--iron)"></i>Lowboys &amp; Moving</h2>
+    <p class="lead">Set each trailer's price per mile once. Then add a trip for each load and tap the machines riding on it. Two small machines can share one trip.</p>
+    <div id="trlset" class="fields"></div>
+    <details><summary>How a trip is figured</summary><p>Each run is there loaded and back empty, so a run is miles one way × 2. "Drop off and pick up" counts two runs, one to bring the machine in and one to bring it home. Cost = miles driven × price per mile, plus the load fee for each run.</p></details>
+  </div>
+  <h3>Add a trip</h3>
+  <div class="addrow" id="addrow"></div>
+  <div id="trips" style="display:grid;gap:12px"></div>
+  <div class="plate">
+    <div class="stat"><span class="k">Trailer miles</span><span class="v" id="o-mi">0<small>mi</small></span></div>
+    <div class="stat hot"><span class="k">Moving cost</span><span class="v" id="o-mob">$0</span></div>
+  </div>
+  <p class="note warn" id="unmoved"></p>
+  <div class="row-btn"><button class="btn primary" data-go="totals">See Totals</button></div>
+</section>
+
+<!-- TOTALS -->
+<section data-p="totals" hidden>
+  <div class="card">
+    <h2>Job Totals</h2>
+    <p class="lead" id="tot-road"></p>
+    <h3>Material</h3>
+    <div class="tbl"><table>
+      <thead><tr><th>Material</th><th>Yd dug</th><th>Yd hauled</th><th>Tons</th><th>Loads</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table></div>
+    <h3>Equipment</h3>
+    <div class="tbl"><table>
+      <thead><tr><th>Machine</th><th>Hours</th><th>$/hr</th><th>Cost</th></tr></thead>
+      <tbody id="ebody"></tbody>
+    </table></div>
+    <h3>Pole bases</h3>
+    <div class="tbl"><table>
+      <thead><tr><th>Item</th><th>Qty</th><th>Cost</th></tr></thead>
+      <tbody id="pbody"></tbody>
+    </table></div>
+    <h3>Moving</h3>
+    <div class="tbl"><table>
+      <thead><tr><th>Trailer</th><th>Machines</th><th>Miles</th><th>Cost</th></tr></thead>
+      <tbody id="tripbody"></tbody>
+    </table></div>
+    <div class="plate">
+      <div class="stat"><span class="k">Stone</span><span class="v" id="o-cStone">$0</span></div>
+      <div class="stat"><span class="k">Dump fees</span><span class="v" id="o-cDump">$0</span></div>
+      <div class="stat"><span class="k">Equipment</span><span class="v" id="o-cEq">$0</span></div>
+      <div class="stat"><span class="k">Pole bases</span><span class="v" id="o-cPole">$0</span></div>
+      <div class="stat"><span class="k">Moving</span><span class="v" id="o-cMob">$0</span></div>
+      <div class="stat hot"><span class="k">Job total</span><span class="v" id="o-cAll">$0</span></div>
+    </div>
+    <p class="note">Equipment rates are your billed rates. Operator labor is counted only if it's built into those rates. Swell and weight numbers are rules of thumb, so check them against your first few loads.</p>
+  </div>
+</section>
+
+</div></main>
+
+<script>
+(function(){
+  var KEY="ewe-estimator-v1", OLD="ewe-none";
+  var defaults={len:1000,wid:16,topD:8,topSw:25,topW:1.2,clayD:4,claySw:35,clayW:1.5,clayOff:100,
+    baseD:6,finD:2,stW:1.5,stC:15,pay:20,box:16,pDump:0,pStone:0,
+    p1dia:18,p1n:4,p1dep:6,p1pr:150, p2dia:24,p2n:2,p2dep:8,p2pr:200,
+    p3dia:30,p3n:0,p3dep:8,p3pr:260, p4dia:36,p4n:0,p4dep:10,p4pr:330,
+    reach:6,extFee:40,crew:95,bitMin:20,bitN:"",fSet:30,fTear:20,fClean:15,formH:12,pConc:0};
+  var MACH=[
+    {id:"exS",g:"Excavators",name:"Small Excavator",rate:95,hrs:0,on:false},
+    {id:"exM",g:"Excavators",name:"Medium Excavator",rate:150,hrs:10,on:true},
+    {id:"exL",g:"Excavators",name:"Large Excavator",rate:210,hrs:0,on:false},
+    {id:"dzS",g:"Dozers",name:"Small Dozer",rate:115,hrs:0,on:false},
+    {id:"dzM",g:"Dozers",name:"Medium Dozer",rate:160,hrs:8,on:true},
+    {id:"dzL",g:"Dozers",name:"Large Dozer",rate:240,hrs:0,on:false},
+    {id:"trS",g:"Trucks",name:"Small Truck (single axle)",rate:85,hrs:0,on:false},
+    {id:"trM",g:"Trucks",name:"Medium Truck (tandem)",rate:100,hrs:0,on:false},
+    {id:"trL",g:"Trucks",name:"Large Truck (tri-axle)",rate:115,hrs:16,on:true},
+    {id:"ss",g:"Loaders & Diggers",name:"Skid Steer",rate:85,hrs:12,on:true},
+    {id:"bh",g:"Loaders & Diggers",name:"Backhoe",rate:95,hrs:0,on:false},
+    {id:"au",g:"Loaders & Diggers",name:"Hole Drilling Machine",rate:150,hrs:0,on:false},
+    {id:"mg",g:"Grading & Rolling",name:"Motor Grader",rate:175,hrs:6,on:true},
+    {id:"sf",g:"Grading & Rolling",name:"Vib Roller, Sheepsfoot",rate:120,hrs:4,on:true},
+    {id:"sd",g:"Grading & Rolling",name:"Vib Roller, Smooth Drum",rate:115,hrs:6,on:true},
+    {id:"ar",g:"Grading & Rolling",name:"Asphalt Roller",rate:110,hrs:0,on:false}
+  ];
+  var TRL=[
+    {id:"tag",name:"Tag Trailer (behind dump truck)",short:"Tag Trailer",rate:3.5,fee:0},
+    {id:"det",name:"Detach Lowboy",short:"Detach Lowboy",rate:6,fee:50},
+    {id:"lan",name:"Landoll Trailer",short:"Landoll",rate:5,fee:50}
+  ];
+  var ids=Object.keys(defaults);
+  var S={v:{},ex:true,mach:{},trl:{},trips:null,seq:1};
+  try{var s=JSON.parse(localStorage.getItem(KEY)||"null");
+    if(s){S=Object.assign(S,s);} else {var o=JSON.parse(localStorage.getItem(OLD)||"null"); if(o&&o.v){S.v=o.v;S.ex=!!o.ex;}}
+  }catch(e){}
+  MACH.forEach(function(m){var old=S.mach[m.id]||{};
+    var hrs=("hrs" in old)?old.hrs:((old.ovr!=null&&String(old.ovr).trim()!=="")?old.ovr:m.hrs);
+    S.mach[m.id]={on:("on" in old)?old.on:m.on,rate:("rate" in old)?old.rate:m.rate,hrs:hrs};});
+  TRL.forEach(function(t){S.trl[t.id]=Object.assign({rate:t.rate,fee:t.fee},S.trl[t.id]||{});});
+  if(!S.trips){S.trips=[
+    {id:1,trl:"det",m:["exM"],mi:25,back:1},
+    {id:2,trl:"lan",m:["dzM"],mi:25,back:1},
+    {id:3,trl:"lan",m:["sf","sd"],mi:25,back:1},
+    {id:4,trl:"tag",m:["ss"],mi:25,back:1}];S.seq=5;}
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+  function num(v){var x=parseFloat(v);return isFinite(x)?x:0;}
+  function n(k){return num(document.getElementById(k).value);}
+  function f(x,d){return (x||0).toLocaleString("en-US",{maximumFractionDigits:d||0,minimumFractionDigits:0});}
+  function money(x){return "$"+Math.round(x||0).toLocaleString("en-US");}
+  function set(id,val,unit){document.getElementById(id).innerHTML=val+(unit?"<small>"+unit+"</small>":"");}
+  function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+  function mname(id){for(var i=0;i<MACH.length;i++)if(MACH[i].id===id)return MACH[i].name;return id;}
+  function tname(id,short){for(var i=0;i<TRL.length;i++)if(TRL[i].id===id)return short?TRL[i].short:TRL[i].name;return id;}
+  function edited(){S.ex=false;}
+  function field(id,label,unit,val,small,ph){return '<label>'+label+'<div class="inp"><input id="'+id+'" inputmode="decimal" type="number" step="any" value="'+esc(val==null?"":val)+'"'+(ph?' placeholder="'+esc(ph)+'"':'')+'><b>'+unit+'</b></div>'+(small?'<small>'+small+'</small>':'')+'</label>';}
+
+  /* ---------- drill rows ---------- */
+  var dh="";
+  for(var i=1;i<=4;i++){
+    dh+='<div class="drill"><h4>Drill size '+i+'<span class="pill" id="ext'+i+'" hidden>Extension</span></h4><div class="fields two">'+
+      '<label>Bit diameter<div class="inp"><input id="p'+i+'dia" inputmode="decimal" type="number" step="any"><b>IN</b></div></label>'+
+      '<label>Price per hole<div class="inp"><input id="p'+i+'pr" inputmode="decimal" type="number" step="any"><b>$</b></div></label>'+
+      '<label>Number of holes<div class="inp"><input id="p'+i+'n" inputmode="decimal" type="number" step="any"><b>#</b></div></label>'+
+      '<label>Depth each<div class="inp"><input id="p'+i+'dep" inputmode="decimal" type="number" step="any"><b>FT</b></div></label>'+
+      '</div><p class="dres" id="dres'+i+'"></p></div>';
+  }
+  document.getElementById("drills").innerHTML=dh;
+
+  ids.forEach(function(k){var el=document.getElementById(k);el.value=(k in S.v)?S.v[k]:defaults[k];
+    el.addEventListener("input",function(){S.v[k]=el.value;edited();save();calc();});});
+
+  /* ---------- equipment list ---------- */
+  var html="", lastG="";
+  MACH.forEach(function(m){var st=S.mach[m.id];
+    if(m.g!==lastG){html+='<div class="grp">'+m.g+'</div>';lastG=m.g;}
+    html+='<div class="mach'+(st.on?'':' off')+'" id="mc-'+m.id+'"><div class="mrow">'+
+      '<span class="sw"><input type="checkbox" id="on-'+m.id+'" aria-label="Use '+esc(m.name)+' on this job"'+(st.on?' checked':'')+'><span></span></span>'+
+      '<span class="mtitle">'+esc(m.name)+'</span><span class="mres" id="mcost-'+m.id+'">$0</span></div>'+
+      '<div class="fields two mf">'+field("m-"+m.id+"-rate","Rate","$/HR",st.rate)+field("m-"+m.id+"-hrs","Hours","HR",st.hrs)+'</div></div>';
+  });
+  document.getElementById("mlist").innerHTML=html;
+  MACH.forEach(function(m){var st=S.mach[m.id];
+    document.getElementById("on-"+m.id).addEventListener("change",function(e){st.on=e.target.checked;
+      document.getElementById("mc-"+m.id).classList.toggle("off",!st.on);edited();save();calc();});
+    ["rate","hrs"].forEach(function(k){var el=document.getElementById("m-"+m.id+"-"+k);
+      el.addEventListener("input",function(){st[k]=el.value;edited();save();calc();});});
+  });
+
+  /* ---------- trailers ---------- */
+  var th="";
+  TRL.forEach(function(t){var st=S.trl[t.id];
+    th+='<div style="display:grid;gap:8px;min-width:0"><strong>'+esc(t.name)+'</strong>'+
+      field("t-"+t.id+"-rate","Price per mile","$/MI",st.rate)+field("t-"+t.id+"-fee","Load fee each run","$",st.fee,"Chains, binders, setup")+'</div>';});
+  document.getElementById("trlset").innerHTML=th;
+  TRL.forEach(function(t){["rate","fee"].forEach(function(k){var el=document.getElementById("t-"+t.id+"-"+k);
+    el.addEventListener("input",function(){S.trl[t.id][k]=el.value;edited();save();calc();});});});
+  document.getElementById("addrow").innerHTML=TRL.map(function(t){return '<button class="btn" data-add="'+t.id+'">+ '+esc(t.short)+'</button>';}).join("");
+  document.querySelectorAll("[data-add]").forEach(function(b){b.addEventListener("click",function(){
+    S.trips.push({id:S.seq++,trl:b.dataset.add,m:[],mi:S.trips.length?S.trips[S.trips.length-1].mi:"",back:1});
+    edited();save();renderTrips();calc();
+    var last=document.querySelector(".trip:last-child");if(last)last.scrollIntoView({behavior:"smooth",block:"center"});});});
+
+  function renderTrips(){
+    var box=document.getElementById("trips");
+    if(!S.trips.length){box.innerHTML='<div class="empty">No trips yet. Tap a trailer above to add the first load.</div>';return;}
+    box.innerHTML=S.trips.map(function(tp){
+      return '<div class="trip" data-trip="'+tp.id+'">'+
+        '<div class="trip-h"><select id="tr-'+tp.id+'-trl" aria-label="Trailer">'+TRL.map(function(t){return '<option value="'+t.id+'"'+(tp.trl===t.id?' selected':'')+'>'+esc(t.name)+'</option>';}).join("")+'</select>'+
+        '<span class="tcost" id="tc-'+tp.id+'">$0</span></div>'+
+        '<div class="chips" role="group" aria-label="Machines on this load">'+MACH.map(function(m){var on=tp.m.indexOf(m.id)>=0;
+          return '<button class="chip" data-m="'+m.id+'" aria-pressed="'+on+'">'+esc(m.name)+'</button>';}).join("")+'</div>'+
+        '<div class="fields">'+field("tr-"+tp.id+"-mi","Miles one way","MI",tp.mi)+
+        '<label>Runs<select id="tr-'+tp.id+'-back"><option value="1"'+(tp.back==1?' selected':'')+'>Drop off and pick up</option><option value="0"'+(tp.back==0?' selected':'')+'>Drop off only</option></select></label></div>'+
+        '<p class="note" id="tn-'+tp.id+'"></p>'+
+        '<button class="btn small" data-rm="'+tp.id+'">Remove trip</button></div>';
+    }).join("");
+    S.trips.forEach(function(tp){var card=box.querySelector('[data-trip="'+tp.id+'"]');
+      document.getElementById("tr-"+tp.id+"-trl").addEventListener("change",function(e){tp.trl=e.target.value;save();calc();});
+      document.getElementById("tr-"+tp.id+"-back").addEventListener("change",function(e){tp.back=+e.target.value;save();calc();});
+      document.getElementById("tr-"+tp.id+"-mi").addEventListener("input",function(e){tp.mi=e.target.value;edited();save();calc();});
+      card.querySelectorAll(".chip").forEach(function(c){c.addEventListener("click",function(){var j=tp.m.indexOf(c.dataset.m);
+        if(j>=0)tp.m.splice(j,1);else tp.m.push(c.dataset.m);c.setAttribute("aria-pressed",j<0?"true":"false");save();calc();});});
+      var rm=card.querySelector("[data-rm]"),armed=false;
+      rm.addEventListener("click",function(){if(!armed){armed=true;rm.textContent="Tap again to remove";setTimeout(function(){armed=false;rm.textContent="Remove trip";},3000);return;}
+        S.trips=S.trips.filter(function(x){return x.id!==tp.id;});save();renderTrips();calc();});
+    });
+  }
+
+  /* ---------- calc ---------- */
+  function calc(){
+    document.getElementById("exflag").hidden=!S.ex;
+    var L=n("len"),W=n("wid"),area=L*W,sqyd=area/9;
+    set("o-area",f(area),"sq ft"); set("o-sqyd",f(sqyd),"sq yd");
+    var yd=function(inches){return area*(inches/12)/27;};
+    var tB=yd(n("topD")), tL=tB*(1+n("topSw")/100), tT=tB*n("topW");
+    set("o-topB",f(tB),"yd³"); set("o-topL",f(tL),"yd³"); set("o-topT",f(tT),"tons");
+    var off=n("clayOff")/100;
+    var cB=yd(n("clayD")), cL=cB*(1+n("claySw")/100)*off, cT=cB*n("clayW");
+    set("o-clayB",f(cB),"yd³"); set("o-clayL",f(cL),"yd³"); set("o-clayT",f(cT),"tons");
+    var k=n("stW")*(1+n("stC")/100);
+    var bY=yd(n("baseD")), fY=yd(n("finD")), bT=bY*k, fT=fY*k, sT=bT+fT;
+    set("o-baseT",f(bT),"tons"); set("o-finT",f(fT),"tons"); set("o-stT",f(sT),"tons");
+    var pay=n("pay"),bx=n("box");
+    function loads(tons,loose){var a=pay>0?tons/pay:0,c=bx>0?loose/bx:0;return Math.ceil(Math.max(a,c)-1e-9);}
+    var topLoads=loads(tT,tL), clayLoads=loads(cT*off,cL), dLoads=topLoads+clayLoads;
+    var sLoads=pay>0?Math.ceil(sT/pay-1e-9):0;
+    set("o-dLoads",f(dLoads),"loads"); set("o-sLoads",f(sLoads),"loads");
+
+    // equipment
+    var eqH=0,eqC=0,erows="";
+    MACH.forEach(function(m){var st=S.mach[m.id],h=num(st.hrs),cost=h*num(st.rate);
+      document.getElementById("mcost-"+m.id).textContent=st.on?money(cost):"Off";
+      if(st.on){eqH+=h;eqC+=cost;erows+="<tr><td>"+esc(m.name)+"</td><td>"+f(h,1)+"</td><td>"+money(num(st.rate))+"</td><td>"+money(cost)+"</td></tr>";}
+    });
+    set("o-eqH",f(eqH,1),"hr"); document.getElementById("o-eqC").textContent=money(eqC);
+    document.getElementById("eqhint").textContent="This job: "+f(tB+cB)+" yd³ of dirt to dig, "+f(dLoads)+" truck loads out, "+f(bY+fY)+" yd³ of stone to spread, "+f(sqyd)+" sq yd to grade and roll.";
+    document.getElementById("ebody").innerHTML=(erows||"<tr><td colspan='4'>No machines switched on</td></tr>")+
+      "<tr class='sum'><td>Equipment</td><td>"+f(eqH,1)+"</td><td></td><td>"+money(eqC)+"</td></tr>";
+
+    // pole bases
+    var reach=n("reach"),extFee=n("extFee"),crew=n("crew"),formH=n("formH");
+    var holes=0,ft=0,conc=0,drillC=0,extN=0,used=0,prow="";
+    for(var i=1;i<=4;i++){
+      var dia=n("p"+i+"dia"),nh=n("p"+i+"n"),dep=n("p"+i+"dep"),pr=n("p"+i+"pr");
+      var r=dia/24, a=Math.PI*r*r, ext=nh>0&&reach>0&&dep>reach;
+      var dirt=nh*a*dep/27, cy=nh*a*(dep+formH/12)/27, c=nh*pr+(ext?nh*extFee:0);
+      holes+=nh;ft+=nh*dep;conc+=cy;drillC+=nh*pr;if(ext)extN+=nh;if(nh>0)used++;
+      document.getElementById("ext"+i).hidden=!ext;
+      document.getElementById("dres"+i).innerHTML=nh>0?
+        f(nh)+" holes × "+f(dep,1)+" ft = <b>"+f(nh*dep,1)+" ft drilled</b> · "+f(dirt,2)+" yd³ dirt out · "+f(cy,2)+" yd³ concrete · <b>"+money(c)+"</b>"+(ext?" (incl. extension)":""):
+        "Not used on this job";
+      if(nh>0)prow+="<tr><td>"+f(dia)+"\" holes, "+f(dep,1)+" ft deep</td><td>"+f(nh)+"</td><td>"+money(nh*pr)+"</td></tr>";
+    }
+    var extC=extN*extFee;
+    document.getElementById("extnote").textContent=extN?f(extN)+" holes need the extension = "+money(extC):"No holes deeper than the bit reaches.";
+    var bitRaw=String(document.getElementById("bitN").value).trim(), bitN=bitRaw===""?used:num(bitRaw);
+    var bitH=bitN*n("bitMin")/60, bitC=bitH*crew;
+    document.getElementById("bitres").innerHTML=f(bitN)+" bit changes × "+f(n("bitMin"))+" min = <b>"+f(bitH,2)+" hr · "+money(bitC)+"</b>";
+    var fMin=n("fSet")+n("fTear")+n("fClean"), formHr=holes*fMin/60, formC=formHr*crew, concC=conc*n("pConc");
+    document.getElementById("formres").innerHTML=f(holes)+" bases × "+f(fMin)+" min = <b>"+f(formHr,1)+" hr · "+money(formC)+"</b>"+(concC?" · concrete "+money(concC):"");
+    var poleTot=drillC+extC+bitC+formC+concC;
+    set("o-pHoles",f(holes)); set("o-pFt",f(ft,1),"ft"); set("o-pConc",f(conc,1),"yd³");
+    document.getElementById("o-pTot").textContent=money(poleTot);
+    if(extN)prow+="<tr><td>Bit extension</td><td>"+f(extN)+"</td><td>"+money(extC)+"</td></tr>";
+    if(holes){prow+="<tr><td>Bit changes</td><td>"+f(bitN)+"</td><td>"+money(bitC)+"</td></tr>"+
+      "<tr><td>Form set, tear down, clean</td><td>"+f(formHr,1)+" hr</td><td>"+money(formC)+"</td></tr>";
+      if(concC)prow+="<tr><td>Concrete</td><td>"+f(conc,1)+" yd³</td><td>"+money(concC)+"</td></tr>";}
+    document.getElementById("pbody").innerHTML=(prow||"<tr><td colspan='3'>No pole holes on this job</td></tr>")+
+      "<tr class='sum'><td>Pole bases</td><td>"+f(holes)+" holes</td><td>"+money(poleTot)+"</td></tr>";
+
+    // trips
+    var mi=0,mob=0,trows="",moved={};
+    S.trips.forEach(function(tp){var t=S.trl[tp.trl]||{rate:0,fee:0},runs=tp.back==1?2:1,miles=num(tp.mi)*2*runs;
+      var cost=miles*num(t.rate)+runs*num(t.fee);mi+=miles;mob+=cost;
+      tp.m.forEach(function(id){moved[id]=1;});
+      var el=document.getElementById("tc-"+tp.id);if(el)el.textContent=money(cost);
+      var nt=document.getElementById("tn-"+tp.id);
+      if(nt){var cnt=tp.m.length,msg=(cnt?cnt+(cnt>1?" machines":" machine")+" on board · ":"Tap the machines on this load · ")+
+        runs+(runs>1?" runs":" run")+" × "+f(num(tp.mi)*2)+" mi = "+f(miles)+" mi";
+        if(cnt>2)msg+=". That's more than 2 machines, check the load fits your trailer.";
+        nt.textContent=msg;nt.className="note"+(cnt>2||cnt===0?" warn":"");}
+      trows+="<tr><td>"+esc(tname(tp.trl,true))+"</td><td style='white-space:normal;text-align:left'>"+(tp.m.map(function(id){return esc(mname(id));}).join(", ")||"—")+"</td><td>"+f(miles)+"</td><td>"+money(cost)+"</td></tr>";
+    });
+    set("o-mi",f(mi),"mi"); document.getElementById("o-mob").textContent=money(mob);
+    var miss=MACH.filter(function(m){return S.mach[m.id].on&&m.g!=="Trucks"&&!moved[m.id];}).map(function(m){return m.name;});
+    if(holes>0&&!moved.au&&miss.indexOf("Hole Drilling Machine")<0)miss.push("Hole Drilling Machine");
+    document.getElementById("unmoved").textContent=miss.length?"Not on any trip yet: "+miss.join(", ")+". Leave it if it drives itself or is already on site.":"";
+    document.getElementById("tripbody").innerHTML=(trows||"<tr><td colspan='4'>No trips added</td></tr>")+
+      "<tr class='sum'><td>Moving</td><td></td><td>"+f(mi)+"</td><td>"+money(mob)+"</td></tr>";
+
+    // totals
+    var cDump=dLoads*n("pDump"), cStone=sT*n("pStone");
+    document.getElementById("o-cStone").textContent=money(cStone);
+    document.getElementById("o-cDump").textContent=money(cDump);
+    document.getElementById("o-cEq").textContent=money(eqC);
+    document.getElementById("o-cPole").textContent=money(poleTot);
+    document.getElementById("o-cMob").textContent=money(mob);
+    lastTotal=cStone+cDump+eqC+poleTot+mob;
+    document.getElementById("o-cAll").textContent=money(lastTotal);
+    document.getElementById("tot-road").textContent=f(L)+" ft long × "+f(W)+" ft wide"+(L>=528?" ("+f(L/5280,2)+" mi)":"")+(S.ex?" · example numbers":"");
+    var rows=[["var(--topsoil)","Topsoil",tB,tL,tT,topLoads],["var(--clay)","Clay cut",cB,cL,cT,clayLoads],["var(--stone)","Stone",bY+fY,null,sT,sLoads]];
+    var h="";rows.forEach(function(r){h+="<tr><td><span class='swatch' style='background:"+r[0]+"'></span>"+r[1]+"</td><td>"+f(r[2])+"</td><td>"+(r[3]==null?"—":f(r[3]))+"</td><td>"+f(r[4])+"</td><td>"+f(r[5])+"</td></tr>";});
+    h+="<tr class='sum'><td>Dirt out</td><td>"+f(tB+cB)+"</td><td>"+f(tL+cL)+"</td><td>"+f(tT+cT)+"</td><td>"+f(dLoads)+"</td></tr>";
+    document.getElementById("tbody").innerHTML=h;
+  }
+
+  /* ---------- saved jobs: phone + GitHub ---------- */
+  var lastTotal=0, LKEY="ewe-saved-jobs", DKEY="ewe-deleted-jobs", GKEY="ewe-github";
+  if(!S.job)S.job={id:null,name:"",place:"",notes:""};
+  try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(e){}
+  var jName=document.getElementById("jName"),jPlace=document.getElementById("jPlace"),jNotes=document.getElementById("jNotes");
+  function showJobName(){document.getElementById("jobname").innerHTML=S.job.name?esc(S.job.name)+(S.job.id?"":" <em>· not saved yet</em>"):"<em>Unsaved estimate</em>";}
+  function fillJob(){jName.value=S.job.name||"";jPlace.value=S.job.place||"";jNotes.value=S.job.notes||"";showJobName();}
+  [["name",jName],["place",jPlace],["notes",jNotes]].forEach(function(p){p[1].addEventListener("input",function(){S.job[p[0]]=p[1].value;save();showJobName();});});
+  fillJob();
+  function readLS(k,d){try{var x=JSON.parse(localStorage.getItem(k)||"null");return x==null?d:x;}catch(e){return d;}}
+  function writeLS(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch(e){return false;}}
+  function jobsGet(){return readLS(LKEY,[]);}
+  function jobsPut(l){return writeLS(LKEY,l);}
+  function delGet(){return readLS(DKEY,{});}
+  function status(id,msg,cls){var el=document.getElementById(id);el.textContent=msg;el.className="status"+(cls?" "+cls:"");}
+  function clock(d){return d.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"});}
+  function snapshot(){return JSON.parse(JSON.stringify({v:S.v,mach:S.mach,trl:S.trl,trips:S.trips,seq:S.seq}));}
+  function applyState(st,job){
+    S.v=Object.assign({},st.v||{});S.ex=false;S.trips=st.trips||[];S.seq=st.seq||(S.trips.length+1);
+    MACH.forEach(function(m){if(st.mach&&st.mach[m.id])S.mach[m.id]=Object.assign({},S.mach[m.id],st.mach[m.id]);
+      var x=S.mach[m.id];document.getElementById("on-"+m.id).checked=!!x.on;
+      document.getElementById("mc-"+m.id).classList.toggle("off",!x.on);
+      document.getElementById("m-"+m.id+"-rate").value=x.rate==null?"":x.rate;
+      document.getElementById("m-"+m.id+"-hrs").value=x.hrs==null?"":x.hrs;});
+    TRL.forEach(function(t){if(st.trl&&st.trl[t.id])S.trl[t.id]=Object.assign({},S.trl[t.id],st.trl[t.id]);
+      document.getElementById("t-"+t.id+"-rate").value=S.trl[t.id].rate;document.getElementById("t-"+t.id+"-fee").value=S.trl[t.id].fee;});
+    ids.forEach(function(k){document.getElementById(k).value=(k in S.v)?S.v[k]:defaults[k];});
+    S.job=job;fillJob();save();renderTrips();calc();
+  }
+  function newId(){return "j"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+
+  function doSave(asNew){
+    if(!S.job.name||!S.job.name.trim()){show("jobs");status("saveStatus","Give this job a name first, then tap Save.","bad");jName.focus();return;}
+    var id=(!asNew&&S.job.id)?S.job.id:newId(),now=new Date();
+    var rec={id:id,name:S.job.name.trim(),place:S.job.place||"",notes:S.job.notes||"",savedAt:now.toISOString(),total:Math.round(lastTotal),len:n("len"),wid:n("wid"),state:snapshot()};
+    var list=jobsGet().filter(function(j){return j.id!==id;});list.unshift(rec);
+    if(!jobsPut(list)){status("saveStatus","This phone wouldn't store it. Your numbers are still here, try again.","bad");return;}
+    S.job.id=id;save();showJobName();renderJobs();
+    status("saveStatus","Saved "+rec.name+" on this phone at "+clock(now)+".","ok");
+    if(ghReady())sync("save");
+  }
+  document.getElementById("saveBtn").addEventListener("click",function(){doSave(false);});
+  document.getElementById("savetop").addEventListener("click",function(){doSave(false);});
+  document.getElementById("saveCopy").addEventListener("click",function(){doSave(true);});
+  var newArmed=false,nb=document.getElementById("newBtn");
+  nb.addEventListener("click",function(){
+    if(!newArmed){newArmed=true;nb.textContent=S.job.id?"Tap again: start new":"Tap again: unsaved work is cleared";setTimeout(function(){newArmed=false;nb.textContent="Start new estimate";},3000);return;}
+    newArmed=false;nb.textContent="Start new estimate";
+    var st=snapshot();
+    ["len","wid","topD","clayD","baseD","finD","p1n","p2n","p3n","p4n","p1dep","p2dep","p3dep","p4dep","bitN"].forEach(function(k){st.v[k]="";});
+    MACH.forEach(function(m){st.mach[m.id].hrs="";});st.trips.forEach(function(t){t.mi="";});
+    applyState(st,{id:null,name:"",place:"",notes:""});
+    status("saveStatus","New estimate started. Your rates and trailer prices carried over.","ok");show("road");
+  });
+
+  function renderJobs(){
+    var jobs=jobsGet(),box=document.getElementById("jlist");
+    document.getElementById("listHead").textContent="Saved jobs ("+jobs.length+")";
+    if(!jobs.length){box.innerHTML='<div class="empty">No saved jobs yet. Name this estimate above and tap Save.</div>';return;}
+    box.innerHTML=jobs.map(function(j){var d=new Date(j.savedAt);
+      return '<div class="jrow'+(j.id===S.job.id?' cur':'')+'"><div style="min-width:0"><div class="jt">'+esc(j.name||"Untitled")+'</div><div class="jm">'+
+        (j.place?esc(j.place)+" · ":"")+(isNaN(d)?"":d.toLocaleDateString([], {month:"short",day:"numeric",year:"numeric"})+" "+clock(d))+
+        (j.len?" · "+f(j.len)+" × "+f(j.wid)+" ft":"")+'</div></div><div style="display:grid;gap:6px;justify-items:end"><span class="jtot">'+money(j.total)+'</span><div class="jb">'+
+        '<button class="btn small" data-open="'+esc(j.id)+'">Open</button><button class="btn small" data-del="'+esc(j.id)+'">Delete</button></div></div></div>';}).join("");
+    box.querySelectorAll("[data-open]").forEach(function(b){b.addEventListener("click",function(){
+      var j=jobsGet().filter(function(x){return x.id===b.dataset.open;})[0];if(!j||!j.state)return;
+      applyState(j.state,{id:j.id,name:j.name||"",place:j.place||"",notes:j.notes||""});
+      status("saveStatus","Opened "+(j.name||"job")+". Changes aren't kept until you tap Save.","ok");renderJobs();});});
+    box.querySelectorAll("[data-del]").forEach(function(b){var armed=false;b.addEventListener("click",function(){
+      if(!armed){armed=true;b.textContent="Tap again";setTimeout(function(){armed=false;b.textContent="Delete";},3000);return;}
+      var id=b.dataset.del;jobsPut(jobsGet().filter(function(x){return x.id!==id;}));
+      var dl=delGet();dl[id]=new Date().toISOString();writeLS(DKEY,dl);
+      if(S.job.id===id){S.job.id=null;save();showJobName();}renderJobs();status("saveStatus","Deleted.","ok");
+      if(ghReady())sync("delete");});});
+  }
+  renderJobs();
+
+  /* GitHub */
+  var gh=readLS(GKEY,{owner:"",repo:"earthwrx-jobs",token:""});
+  var ghOwner=document.getElementById("ghOwner"),ghRepo=document.getElementById("ghRepo"),ghToken=document.getElementById("ghToken");
+  ghOwner.value=gh.owner||"";ghRepo.value=gh.repo||"";ghToken.value=gh.token||"";
+  function ghReady(){return !!(gh.owner&&gh.repo&&gh.token);}
+  var FILE="jobs.json";
+  function api(method,path,body){
+    return fetch("https://api.github.com/repos/"+encodeURIComponent(gh.owner)+"/"+encodeURIComponent(gh.repo)+path,{
+      method:method,cache:"no-store",
+      headers:{"Authorization":"Bearer "+gh.token,"Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28"},
+      body:body?JSON.stringify(body):undefined});
+  }
+  function b64enc(str){var bytes=new TextEncoder().encode(str),bin="";for(var i=0;i<bytes.length;i+=0x8000)bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));return btoa(bin);}
+  function b64dec(b){var bin=atob(String(b).replace(/\s/g,"")),u=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new TextDecoder().decode(u);}
+  function why(r){
+    if(r.status===401)return "GitHub didn't accept the token. Check it was copied in full and hasn't expired.";
+    if(r.status===403)return "The token isn't allowed to change this repository. Give it Contents: Read and write.";
+    if(r.status===404)return "Couldn't find "+gh.owner+"/"+gh.repo+". Check the username and repository name, and that the token includes that repository.";
+    return "GitHub answered with error "+r.status+".";
+  }
+  function readRemote(){
+    return api("GET","/contents/"+FILE).then(function(r){
+      if(r.status===404){return api("GET","").then(function(rr){if(!rr.ok)throw new Error(why(rr));return {data:{jobs:[],deleted:{}},sha:null};});}
+      if(!r.ok)throw new Error(why(r));
+      return r.json().then(function(j){
+        var get=j.content?Promise.resolve(j.content):api("GET","/git/blobs/"+j.sha).then(function(b){if(!b.ok)throw new Error(why(b));return b.json().then(function(x){return x.content;});});
+        return get.then(function(c){var data;try{data=JSON.parse(b64dec(c));}catch(e){data={jobs:[],deleted:{}};}
+          return {data:{jobs:Array.isArray(data.jobs)?data.jobs:[],deleted:data.deleted||{}},sha:j.sha};});
+      });
+    });
+  }
+  function merge(aJobs,aDel,bJobs,bDel){
+    var del=Object.assign({},aDel);Object.keys(bDel||{}).forEach(function(k){if(!del[k]||bDel[k]>del[k])del[k]=bDel[k];});
+    var by={};[].concat(aJobs,bJobs).forEach(function(j){if(!j||!j.id)return;if(!by[j.id]||String(j.savedAt)>String(by[j.id].savedAt))by[j.id]=j;});
+    var jobs=Object.keys(by).map(function(k){return by[k];}).filter(function(j){return !(del[j.id]&&del[j.id]>=String(j.savedAt));})
+      .sort(function(a,b){return String(b.savedAt).localeCompare(String(a.savedAt));});
+    return {jobs:jobs,deleted:del};
+  }
+  function sig(d){return JSON.stringify(d.jobs.map(function(j){return j.id+"@"+j.savedAt;}))+JSON.stringify(Object.keys(d.deleted).sort());}
+  var syncing=false,again=false;
+  function sync(reason,tries){
+    if(!ghReady()){status("syncStatus","Fill in the GitHub box below to save to GitHub.","bad");return Promise.resolve(false);}
+    if(syncing){again=true;return Promise.resolve(false);}
+    syncing=true;tries=tries||0;status("syncStatus",reason==="pull"?"Pulling from GitHub…":"Sending to GitHub…");
+    return readRemote().then(function(rem){
+      var m=merge(jobsGet(),delGet(),rem.data.jobs,rem.data.deleted);
+      jobsPut(m.jobs);writeLS(DKEY,m.deleted);renderJobs();
+      if(rem.sha&&sig(m)===sig(rem.data))return {pushed:false,n:m.jobs.length};
+      var body={message:"EWE estimator: "+(reason||"sync")+" "+new Date().toISOString(),content:b64enc(JSON.stringify({app:"ewe-estimator",version:1,updated:new Date().toISOString(),jobs:m.jobs,deleted:m.deleted},null,1))};
+      if(rem.sha)body.sha=rem.sha;
+      return api("PUT","/contents/"+FILE,body).then(function(r){
+        if(r.status===409||r.status===422){var e=new Error("conflict");e.conflict=true;throw e;}
+        if(!r.ok)throw new Error(why(r));return {pushed:true,n:m.jobs.length};});
+    }).then(function(res){syncing=false;
+      status("syncStatus",(res.pushed?"Saved to GitHub":"Up to date with GitHub")+" at "+clock(new Date())+" · "+res.n+" jobs.","ok");
+      if(again){again=false;return sync(reason);}return true;
+    },function(err){syncing=false;
+      if(err&&err.conflict&&tries<2)return sync(reason,tries+1);
+      var msg=(err&&err.message)||"no answer";
+      if(err instanceof TypeError)msg="No signal or GitHub can't be reached. Jobs are safe on this phone; tap Pull from GitHub when you have signal.";
+      status("syncStatus",msg,"bad");return false;});
+  }
+  document.getElementById("syncBtn").addEventListener("click",function(){sync("pull");});
+  document.getElementById("ghSave").addEventListener("click",function(){
+    gh={owner:ghOwner.value.trim(),repo:ghRepo.value.trim(),token:ghToken.value.trim()};
+    if(!ghReady()){status("ghStatus","Fill in all three boxes.","bad");return;}
+    writeLS(GKEY,gh);status("ghStatus","Testing…");
+    sync("connect").then(function(ok){status("ghStatus",ok?"Connected to "+gh.owner+"/"+gh.repo+". Saves now go to GitHub too.":"Not connected yet. See the message above the job list.",ok?"ok":"bad");});
+  });
+  var fArmed=false,fb=document.getElementById("ghForget");
+  fb.addEventListener("click",function(){
+    if(!fArmed){fArmed=true;fb.textContent="Tap again to disconnect";setTimeout(function(){fArmed=false;fb.textContent="Disconnect";},3000);return;}
+    fArmed=false;fb.textContent="Disconnect";gh={owner:gh.owner,repo:gh.repo,token:""};writeLS(GKEY,gh);ghToken.value="";
+    status("ghStatus","Disconnected. The token was removed from this phone. Jobs stay on the phone and on GitHub.","ok");status("syncStatus","","");});
+  if(ghReady())sync("pull");
+
+  /* backup file */
+  document.getElementById("backupBtn").addEventListener("click",function(){
+    var jobs=jobsGet();if(!jobs.length){status("backupStatus","There are no saved jobs to back up yet.","bad");return;}
+    var d=new Date(),stamp=d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2),name="EWE-jobs-backup-"+stamp+".json";
+    var text=JSON.stringify({app:"ewe-estimator",version:1,exported:d.toISOString(),jobs:jobs,deleted:delGet()},null,1),file;
+    try{file=new File([text],name,{type:"application/json"});}catch(e){file=null;}
+    function dl(){try{var url=URL.createObjectURL(new Blob([text],{type:"application/json"})),a=document.createElement("a");
+      a.href=url;a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(url);a.remove();},2000);
+      status("backupStatus","Backup saved as "+name+" ("+jobs.length+" jobs). Check your Downloads.","ok");}catch(e){status("backupStatus","This phone wouldn't save the backup file.","bad");}}
+    if(file&&navigator.canShare&&navigator.canShare({files:[file]})){navigator.share({files:[file],title:"EarthWrx job backup"}).then(function(){status("backupStatus","Backup sent: "+jobs.length+" jobs.","ok");},function(e){if(e&&e.name==="AbortError")status("backupStatus","Backup cancelled.","");else dl();});}
+    else dl();
+  });
+  document.getElementById("restoreFile").addEventListener("change",function(e){
+    var file=e.target.files&&e.target.files[0];if(!file)return;var r=new FileReader();
+    r.onload=function(){try{var data=JSON.parse(r.result);
+      if(!data||data.app!=="ewe-estimator"||!Array.isArray(data.jobs))throw new Error("not an EarthWrx backup");
+      var m=merge(jobsGet(),delGet(),data.jobs,data.deleted||{});jobsPut(m.jobs);writeLS(DKEY,m.deleted);renderJobs();
+      status("backupStatus","Restored. You now have "+m.jobs.length+" jobs.","ok");if(ghReady())sync("restore");}
+      catch(err){status("backupStatus","Couldn't restore: "+err.message+". Pick a file named EWE-jobs-backup.","bad");}e.target.value="";};
+    r.onerror=function(){status("backupStatus","Couldn't read that file.","bad");};r.readAsText(file);
+  });
+  /* ---------- tabs ---------- */
+  var tabs=[].slice.call(document.querySelectorAll(".tab")), panels=[].slice.call(document.querySelectorAll("[data-p]"));
+  function show(t){tabs.forEach(function(b){var on=b.dataset.t===t;b.setAttribute("aria-selected",on?"true":"false");if(on)b.scrollIntoView({block:"nearest",inline:"center"});});
+    panels.forEach(function(p){p.hidden=p.dataset.p!==t;});
+    try{localStorage.setItem(KEY+"-tab",t);}catch(e){} window.scrollTo(0,0);}
+  tabs.forEach(function(b){b.addEventListener("click",function(){show(b.dataset.t);});});
+  document.querySelectorAll("[data-go]").forEach(function(b){b.addEventListener("click",function(){show(b.dataset.go);});});
+  var clearArmed=false, rb=document.getElementById("reset");
+  rb.addEventListener("click",function(){
+    if(!clearArmed){clearArmed=true;rb.textContent="Tap again to clear";setTimeout(function(){clearArmed=false;rb.textContent="Clear job numbers";},3000);return;}
+    var clear=["len","wid","topD","clayD","baseD","finD","p1n","p2n","p3n","p4n","p1dep","p2dep","p3dep","p4dep","bitN"];
+    clear.forEach(function(k){var el=document.getElementById(k);el.value="";S.v[k]="";});
+    MACH.forEach(function(m){S.mach[m.id].hrs="";document.getElementById("m-"+m.id+"-hrs").value="";});
+    S.ex=false;save();calc();clearArmed=false;rb.textContent="Clear job numbers";});
+  var start="road"; try{start=localStorage.getItem(KEY+"-tab")||"road";}catch(e){}
+  if(!document.querySelector('[data-p="'+start+'"]'))start="road";
+  renderTrips(); show(start); calc();
+  if("serviceWorker" in navigator&&location.protocol==="https:"){try{navigator.serviceWorker.register("sw.js").catch(function(){});}catch(e){}}
+})();
+</script>
+
+</body>
+</html>
