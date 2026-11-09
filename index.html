@@ -150,6 +150,36 @@ textarea:focus,.txt:focus{outline:none;border-color:var(--machine)}
 html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);background:#1b1f1e}
 [hidden]{display:none!important}
 img{max-width:100%}
+
+.dres{font-size:.92rem;color:var(--muted);font-variant-numeric:tabular-nums;margin:0}
+.dres b{color:var(--fg)}
+.fields.three{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.srow{border:1px solid var(--line);border-radius:8px;padding:12px;display:grid;gap:10px;background:var(--field)}
+label.chk{display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer}
+label.chk input{width:22px;height:22px}
+.taxl{display:grid;gap:8px}
+.taxl .chip{display:flex;justify-content:space-between;gap:12px;text-align:left;border-radius:8px;width:100%}
+.taxl .chip span:last-child{white-space:nowrap;font-weight:700}
+.invdoc{background:#fff;color:#16181a;border:1px solid var(--line);border-radius:8px;padding:20px;font:14px/1.45 var(--body);overflow-x:auto;min-width:0}
+.invdoc .ih{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;border-bottom:3px solid #16181a;padding-bottom:12px}
+.invdoc .ibiz{font-family:var(--display);font-weight:800;font-size:1.5rem;letter-spacing:.04em;text-transform:uppercase}
+.invdoc .ititle{text-align:right;font-family:var(--display);font-weight:800;font-size:1.8rem;letter-spacing:.08em}
+.invdoc .ititle span{display:block;font-size:1rem;letter-spacing:.02em}
+.invdoc .imeta{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:14px 0}
+.invdoc .imeta b{font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;color:#555}
+.invdoc table{min-width:520px}
+.invdoc th{color:#555;border-bottom:2px solid #16181a}
+.invdoc td{border-bottom:1px solid #ddd;white-space:normal;color:#16181a}
+.invdoc td:first-child{min-width:180px}
+.invdoc .itot{margin-left:auto;max-width:300px;display:grid;grid-template-columns:1fr auto;gap:4px 16px;margin-top:12px;font-variant-numeric:tabular-nums}
+.invdoc .itot .g{font-weight:800;font-size:1.15rem;border-top:2px solid #16181a;padding-top:6px}
+.invdoc .inote{color:#555;font-size:.85rem;margin:14px 0 0}
+@media print{
+  html,body{background:#fff!important}
+  body::before,header,nav,.noprint,main section:not([data-p="invoice"]){display:none!important}
+  main .wrap{padding:0!important;max-width:none}
+  .invdoc{border:0;padding:0;overflow:visible}
+}
 </style>
 
 </head>
@@ -166,11 +196,13 @@ img{max-width:100%}
   <button class="tab" role="tab" data-t="top" id="t-top">Topsoil</button>
   <button class="tab" role="tab" data-t="clay" id="t-clay">Cut to Clay</button>
   <button class="tab" role="tab" data-t="stone" id="t-stone">Stone</button>
+  <button class="tab" role="tab" data-t="site">Site Work</button>
   <button class="tab" role="tab" data-t="trucks" id="t-trucks">Haul Off</button>
   <button class="tab" role="tab" data-t="equip" id="t-equip">Equipment</button>
   <button class="tab" role="tab" data-t="poles" id="t-poles">Pole Bases</button>
   <button class="tab" role="tab" data-t="lowboy" id="t-lowboy">Lowboys</button>
   <button class="tab" role="tab" data-t="totals" id="t-totals">Totals</button>
+  <button class="tab" role="tab" data-t="invoice">Invoice</button>
 </div></div></nav>
 
 <main><div class="wrap" id="panels">
@@ -230,7 +262,8 @@ img{max-width:100%}
   <div class="card">
     <h2>Road Size</h2>
     <p class="lead">Enter the road once here. Every other tab uses these numbers. <span class="flag" id="exflag">Example numbers loaded</span></p>
-    <div class="fields">
+    <label>Job type<select id="jobType"><option value="road">Road</option><option value="site">Site work</option><option value="both">Road + site work</option></select><small>Site work turns on the Site Work tab. "Site work" alone hides the road tabs.</small></label>
+    <div class="fields" id="roadDims">
       <label>Length<div class="inp"><input id="len" inputmode="decimal" type="number" step="any"><b>FT</b></div><small>5,280 ft = 1 mile</small></label>
       <label>Width<div class="inp"><input id="wid" inputmode="decimal" type="number" step="any"><b>FT</b></div><small>Include shoulders if you dig them</small></label>
     </div>
@@ -301,6 +334,51 @@ img{max-width:100%}
     </div>
     <div class="row-btn"><button class="btn primary" data-go="trucks">Next: Haul Off</button></div>
   </div>
+</section>
+
+<!-- SITE WORK -->
+<section data-p="site" hidden>
+  <div class="card">
+    <h2><i style="background:var(--clay)"></i>Site Work</h2>
+    <p class="lead">Fill in only what this job has and leave the rest at 0. Prices are examples, so put in yours.</p>
+    <div class="plate">
+      <div class="stat"><span class="k">Dirt out</span><span class="v" id="o-sOut">0</span></div>
+      <div class="stat"><span class="k">Import fill</span><span class="v" id="o-sImp">0</span></div>
+      <div class="stat"><span class="k">Trench dug</span><span class="v" id="o-sTr">0</span></div>
+      <div class="stat hot"><span class="k">Site work</span><span class="v" id="o-sTot">$0</span></div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Clearing &amp; grubbing</h3>
+    <div class="fields"><label>Area<div class="inp"><input id="s_clrAc" inputmode="decimal" type="number" step="any"><b>ACRES</b></div><small>1 acre = 43,560 sq ft</small></label><label>Price<div class="inp"><input id="s_clrPr" inputmode="decimal" type="number" step="any"><b>$/ACRE</b></div></label></div>
+  </div>
+  <div class="card">
+    <h3>Building pad / lot grading</h3>
+    <div class="fields"><label>Pad length<div class="inp"><input id="s_padL" inputmode="decimal" type="number" step="any"><b>FT</b></div></label><label>Pad width<div class="inp"><input id="s_padW" inputmode="decimal" type="number" step="any"><b>FT</b></div></label><label>Topsoil strip<div class="inp"><input id="s_padTop" inputmode="decimal" type="number" step="any"><b>IN</b></div><small>Hauled off</small></label><label>Cut depth<div class="inp"><input id="s_padCut" inputmode="decimal" type="number" step="any"><b>IN</b></div><small>Dirt taken down</small></label><label>Fill depth<div class="inp"><input id="s_padFill" inputmode="decimal" type="number" step="any"><b>IN</b></div><small>Dirt built up, compacted</small></label><label>Fill shrink<div class="inp"><input id="s_shrink" inputmode="decimal" type="number" step="any"><b>%</b></div><small>Extra dirt to make compacted fill, about 20%</small></label><label>Swell in truck<div class="inp"><input id="s_padSw" inputmode="decimal" type="number" step="any"><b>%</b></div><small>Dirt hauled off, about 30%</small></label><label>Import fill price<div class="inp"><input id="s_impPr" inputmode="decimal" type="number" step="any"><b>$/YD³</b></div><small>Delivered, if you're short</small></label></div>
+    <p class="dres" id="padres"></p>
+  </div>
+  <div class="card">
+    <h3>Utility trench</h3>
+    <div class="fields"><label>Length<div class="inp"><input id="s_trL" inputmode="decimal" type="number" step="any"><b>FT</b></div></label><label>Width<div class="inp"><input id="s_trW" inputmode="decimal" type="number" step="any"><b>IN</b></div></label><label>Depth<div class="inp"><input id="s_trD" inputmode="decimal" type="number" step="any"><b>FT</b></div></label><label>Bedding stone<div class="inp"><input id="s_trBed" inputmode="decimal" type="number" step="any"><b>IN</b></div></label></div>
+    <p class="dres" id="trres"></p>
+    <p class="note">Trench dirt goes back in the trench. Bedding stone uses the stone weight from the Stone tab and the price from Haul Off.</p>
+  </div>
+  <div class="card">
+    <h3>Erosion control</h3>
+    <div class="fields"><label>Silt fence<div class="inp"><input id="s_silt" inputmode="decimal" type="number" step="any"><b>FT</b></div></label><label>Silt fence price<div class="inp"><input id="s_siltPr" inputmode="decimal" type="number" step="any"><b>$/FT</b></div></label><label>Construction entrances<div class="inp"><input id="s_ent" inputmode="decimal" type="number" step="any"><b>#</b></div></label><label>Price each<div class="inp"><input id="s_entPr" inputmode="decimal" type="number" step="any"><b>$</b></div></label><label>Inlet protection<div class="inp"><input id="s_inl" inputmode="decimal" type="number" step="any"><b>#</b></div></label><label>Price each<div class="inp"><input id="s_inlPr" inputmode="decimal" type="number" step="any"><b>$</b></div></label></div>
+  </div>
+  <div class="card">
+    <h3>Seed &amp; straw</h3>
+    <div class="fields"><label>Area<div class="inp"><input id="s_seed" inputmode="decimal" type="number" step="any"><b>SQ YD</b></div><small>1 acre = 4,840 sq yd</small></label><label>Price<div class="inp"><input id="s_seedPr" inputmode="decimal" type="number" step="any"><b>$/SQ YD</b></div></label></div>
+  </div>
+  <div class="card">
+    <h3>Pipe, culverts &amp; other items</h3>
+    <p class="note">Pipe, culverts, septic, driveways, ponds, demo, anything else. Check "Material" if it's taxable.</p>
+    <div id="s_rows" style="display:grid;gap:10px"></div>
+    <button class="btn" id="s_add" style="justify-self:start">+ Add item</button>
+    <input type="hidden" id="s_items">
+  </div>
+  <div class="row-btn"><button class="btn primary" data-go="trucks">Next: Haul Off</button></div>
 </section>
 
 <!-- HAUL OFF -->
@@ -431,15 +509,75 @@ img{max-width:100%}
       <thead><tr><th>Trailer</th><th>Machines</th><th>Miles</th><th>Cost</th></tr></thead>
       <tbody id="tripbody"></tbody>
     </table></div>
+    <h3 id="siteHead">Site work</h3>
+    <div class="tbl" id="siteTbl"><table>
+      <thead><tr><th>Item</th><th>Qty</th><th>Cost</th></tr></thead>
+      <tbody id="sitebody"></tbody>
+    </table></div>
     <div class="plate">
       <div class="stat"><span class="k">Stone</span><span class="v" id="o-cStone">$0</span></div>
       <div class="stat"><span class="k">Dump fees</span><span class="v" id="o-cDump">$0</span></div>
       <div class="stat"><span class="k">Equipment</span><span class="v" id="o-cEq">$0</span></div>
       <div class="stat"><span class="k">Pole bases</span><span class="v" id="o-cPole">$0</span></div>
+      <div class="stat"><span class="k">Site work</span><span class="v" id="o-cSite">$0</span></div>
       <div class="stat"><span class="k">Moving</span><span class="v" id="o-cMob">$0</span></div>
       <div class="stat hot"><span class="k">Job total</span><span class="v" id="o-cAll">$0</span></div>
     </div>
     <p class="note">Equipment rates are your billed rates. Operator labor is counted only if it's built into those rates. Swell and weight numbers are rules of thumb, so check them against your first few loads.</p>
+    <div class="row-btn"><button class="btn primary" data-go="invoice">Make invoice</button></div>
+  </div>
+</section>
+
+<!-- INVOICE -->
+<section data-p="invoice" hidden>
+  <div class="card noprint">
+    <h2>Invoice</h2>
+    <p class="lead">Turns this estimate into an invoice. The other tabs show your cost. The invoice shows your price with markup.</p>
+    <div class="fields">
+      <label>Customer name<input class="txt" id="custName" type="text" autocomplete="off"></label>
+      <label>Job location<input class="txt" id="jobLoc" type="text" autocomplete="off" placeholder="Uses the job's location if blank"></label>
+    </div>
+    <label>Bill-to address<textarea id="custAddr" placeholder="Street&#10;City, State ZIP"></textarea></label>
+    <div class="fields">
+      <label>Invoice number<input class="txt" id="invNo" type="text" autocomplete="off"></label>
+      <label>Invoice date<input class="txt" id="invDate" type="date"></label>
+      <label>Terms<select id="invTerms"><option>Due on receipt</option><option>Net 15</option><option>Net 30</option><option>Net 45</option></select></label>
+    </div>
+    <div class="row-btn"><button class="btn small" id="invNext">Use next invoice number</button></div>
+    <div class="fields">
+      <label>Overhead &amp; profit<div class="inp"><input id="invMk" inputmode="decimal" type="number" step="any"><b>%</b></div><small>Added on top of your cost</small></label>
+      <label>Bill this time<div class="inp"><input id="invPct" inputmode="decimal" type="number" step="any"><b>%</b></div><small>100 = whole job. 30 = a 30% progress bill</small></label>
+      <label>Sales tax rate<div class="inp"><input id="invTax" inputmode="decimal" type="number" step="any"><b>%</b></div><small>For the printed total. QuickBooks figures its own.</small></label>
+      <label>Show lines<select id="invDetail"><option value="detail">Every line</option><option value="summary">Summary (a few lines)</option></select></label>
+    </div>
+    <input type="hidden" id="taxMap">
+  </div>
+  <div class="card noprint">
+    <h3>Taxable lines</h3>
+    <p class="note">Tap a line to switch it. Set these the way your accountant tells you, because the rules differ by state.</p>
+    <div class="taxl" id="taxList"></div>
+  </div>
+  <div id="invDoc" class="invdoc"></div>
+  <div class="row-btn noprint">
+    <button class="btn primary" id="invPrint">Print or save PDF</button>
+    <button class="btn" id="itemsCsv">QuickBooks items list</button>
+  </div>
+  <p class="status noprint" id="invStatus" aria-live="polite"></p>
+  <details class="card noprint"><summary>Putting it in QuickBooks</summary>
+    <p><b>One time:</b> tap "QuickBooks items list" and send the file to yourself. In QuickBooks Online: gear (Settings), then Import data, then Products and services. Upload the file. When it asks, match "Income Account" to your income account.</p>
+    <p><b>Each invoice:</b> in QuickBooks, + New, then Invoice. Pick the customer. For each line, pick the same item name and type the amount from this invoice. Tick Tax on the same lines this invoice marks with T. QuickBooks adds the sales tax.</p>
+    <p><b>To send the customer a copy:</b> tap "Print or save PDF", choose Save as PDF, then text or email the PDF.</p>
+  </details>
+  <div class="card noprint">
+    <h3>Your business info</h3>
+    <p class="note">Shows at the top of every invoice. Saved on this phone.</p>
+    <div class="fields">
+      <label>Business name<input class="txt" id="bizName" type="text" autocomplete="off"></label>
+      <label>Phone<input class="txt" id="bizPhone" type="text" autocomplete="off" inputmode="tel"></label>
+      <label>Email<input class="txt" id="bizEmail" type="text" autocomplete="off" inputmode="email"></label>
+      <label>Next invoice number<input class="txt" id="nextInv" type="text" autocomplete="off"></label>
+    </div>
+    <label>Address<textarea id="bizAddr" placeholder="Street&#10;City, State ZIP"></textarea></label>
   </div>
 </section>
 
@@ -448,7 +586,7 @@ img{max-width:100%}
 <script>
 (function(){
   var KEY="ewe-estimator-v1", OLD="ewe-none";
-  var defaults={len:1000,wid:16,topD:8,topSw:25,topW:1.2,clayD:4,claySw:35,clayW:1.5,clayOff:100,
+  var defaults={jobType:"road",s_clrAc:0,s_clrPr:3500,s_padL:0,s_padW:0,s_padTop:6,s_padCut:0,s_padFill:0,s_shrink:20,s_padSw:30,s_impPr:18,s_trL:0,s_trW:24,s_trD:4,s_trBed:6,s_silt:0,s_siltPr:3,s_ent:0,s_entPr:2500,s_inl:0,s_inlPr:150,s_seed:0,s_seedPr:0.75,s_items:"[]",custName:"",custAddr:"",jobLoc:"",invNo:"",invDate:"",invTerms:"Net 30",invMk:15,invPct:100,invTax:0,invDetail:"detail",taxMap:"{}",len:1000,wid:16,topD:8,topSw:25,topW:1.2,clayD:4,claySw:35,clayW:1.5,clayOff:100,
     baseD:6,finD:2,stW:1.5,stC:15,pay:20,box:16,pDump:0,pStone:0,
     p1dia:18,p1n:4,p1dep:6,p1pr:150, p2dia:24,p2n:2,p2dep:8,p2pr:200,
     p3dia:30,p3n:0,p3dep:8,p3pr:260, p4dia:36,p4n:0,p4dep:10,p4pr:330,
@@ -577,7 +715,7 @@ img{max-width:100%}
   /* ---------- calc ---------- */
   function calc(){
     document.getElementById("exflag").hidden=!S.ex;
-    var L=n("len"),W=n("wid"),area=L*W,sqyd=area/9;
+    var JT=document.getElementById("jobType").value||"road",L=JT==="site"?0:n("len"),W=n("wid"),area=L*W,sqyd=area/9;
     set("o-area",f(area),"sq ft"); set("o-sqyd",f(sqyd),"sq yd");
     var yd=function(inches){return area*(inches/12)/27;};
     var tB=yd(n("topD")), tL=tB*(1+n("topSw")/100), tT=tB*n("topW");
@@ -663,8 +801,9 @@ img{max-width:100%}
     document.getElementById("o-cEq").textContent=money(eqC);
     document.getElementById("o-cPole").textContent=money(poleTot);
     document.getElementById("o-cMob").textContent=money(mob);
-    lastTotal=cStone+cDump+eqC+poleTot+mob;
-    document.getElementById("o-cAll").textContent=money(lastTotal);
+    var SR=siteCalc();EST={mob:mob,dump:cDump,dLoads:dLoads,baseT:bT,finT:fT,baseD:n("baseD"),finD:n("finD"),pStone:n("pStone"),pole:poleTot,holes:holes,site:SR};
+    lastTotal=cStone+cDump+eqC+poleTot+mob+SR.total;
+    document.getElementById("o-cAll").textContent=money(lastTotal);document.getElementById("o-cSite").textContent=money(SR.total);invRender();
     document.getElementById("tot-road").textContent=f(L)+" ft long × "+f(W)+" ft wide"+(L>=528?" ("+f(L/5280,2)+" mi)":"")+(S.ex?" · example numbers":"");
     var rows=[["var(--topsoil)","Topsoil",tB,tL,tT,topLoads],["var(--clay)","Clay cut",cB,cL,cT,clayLoads],["var(--stone)","Stone",bY+fY,null,sT,sLoads]];
     var h="";rows.forEach(function(r){h+="<tr><td><span class='swatch' style='background:"+r[0]+"'></span>"+r[1]+"</td><td>"+f(r[2])+"</td><td>"+(r[3]==null?"—":f(r[3]))+"</td><td>"+f(r[4])+"</td><td>"+f(r[5])+"</td></tr>";});
@@ -721,7 +860,7 @@ img{max-width:100%}
     if(!newArmed){newArmed=true;nb.textContent=S.job.id?"Tap again: start new":"Tap again: unsaved work is cleared";setTimeout(function(){newArmed=false;nb.textContent="Start new estimate";},3000);return;}
     newArmed=false;nb.textContent="Start new estimate";
     var st=snapshot();
-    ["len","wid","topD","clayD","baseD","finD","p1n","p2n","p3n","p4n","p1dep","p2dep","p3dep","p4dep","bitN"].forEach(function(k){st.v[k]="";});
+    ["len","wid","topD","clayD","baseD","finD","p1n","p2n","p3n","p4n","p1dep","p2dep","p3dep","p4dep","bitN","s_clrAc","s_padL","s_padW","s_padCut","s_padFill","s_trL","s_silt","s_ent","s_inl","s_seed","s_items","custName","custAddr","jobLoc","invNo","invDate","invPct","taxMap"].forEach(function(k){st.v[k]="";});
     MACH.forEach(function(m){st.mach[m.id].hrs="";});st.trips.forEach(function(t){t.mi="";});
     applyState(st,{id:null,name:"",place:"",notes:""});
     status("saveStatus","New estimate started. Your rates and trailer prices carried over.","ok");show("road");
@@ -846,6 +985,173 @@ img{max-width:100%}
       catch(err){status("backupStatus","Couldn't restore: "+err.message+". Pick a file named EWE-jobs-backup.","bad");}e.target.value="";};
     r.onerror=function(){status("backupStatus","Couldn't read that file.","bad");};r.readAsText(file);
   });
+  /* ---------- site work + invoice ---------- */
+  var BKEY="ewe-business",EST=null;
+  var BIZ_DEF={bizName:"EarthWrx Excavating",bizAddr:"",bizPhone:"",bizEmail:"",nextInv:"1001"};
+  function readJ(k,d){try{var x=JSON.parse(localStorage.getItem(k)||"null");return x==null?d:x;}catch(e){return d;}}
+  function writeJ(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+  var biz=Object.assign({},BIZ_DEF,readJ(BKEY,{}));
+  Object.keys(BIZ_DEF).forEach(function(k){var el=document.getElementById(k);el.value=biz[k]||"";
+    el.addEventListener("input",function(){biz[k]=el.value;writeJ(BKEY,biz);invRender();});});
+
+  /* other site items */
+  var itemsEl=document.getElementById("s_items"),itemsShown=null;
+  function itemsGet(){try{var a=JSON.parse(itemsEl.value||"[]");return Array.isArray(a)?a:[];}catch(e){return [];}}
+  function itemsStore(a){itemsEl.value=JSON.stringify(a);S.v.s_items=itemsEl.value;S.ex=false;save();itemsShown=itemsEl.value;}
+  function itemsRender(){
+    var a=itemsGet(),box=document.getElementById("s_rows");itemsShown=itemsEl.value;
+    if(!a.length){box.innerHTML='<p class="note">No extra items yet.</p>';return;}
+    box.innerHTML=a.map(function(r,i){return '<div class="srow" data-i="'+i+'">'+
+      '<label>Item<input class="txt" data-k="d" type="text" value="'+esc(r.d||"")+'" placeholder="e.g. 18 in culvert pipe"></label>'+
+      '<div class="fields three">'+
+      '<label>Qty<div class="inp"><input data-k="q" inputmode="decimal" type="number" step="any" value="'+esc(r.q==null?"":r.q)+'"></div></label>'+
+      '<label>Unit<input class="txt" data-k="u" type="text" value="'+esc(r.u||"")+'" placeholder="ft"></label>'+
+      '<label>Price each<div class="inp"><input data-k="p" inputmode="decimal" type="number" step="any" value="'+esc(r.p==null?"":r.p)+'"><b>$</b></div></label></div>'+
+      '<div class="row-btn" style="align-items:center;justify-content:space-between"><label class="chk"><input type="checkbox" data-k="t"'+(r.t?' checked':'')+'> Material (taxable)</label>'+
+      '<button class="btn small" data-rm>Remove</button></div></div>';}).join("");
+    box.querySelectorAll(".srow").forEach(function(row){var i=+row.dataset.i;
+      row.querySelectorAll("[data-k]").forEach(function(el){
+        el.addEventListener(el.type==="checkbox"?"change":"input",function(){var a=itemsGet();if(!a[i])return;
+          a[i][el.dataset.k]=el.type==="checkbox"?el.checked:el.value;itemsStore(a);calc();});});
+      var rm=row.querySelector("[data-rm]"),armed=false;
+      rm.addEventListener("click",function(){if(!armed){armed=true;rm.textContent="Tap again";setTimeout(function(){armed=false;rm.textContent="Remove";},3000);return;}
+        var a=itemsGet();a.splice(i,1);itemsStore(a);itemsRender();calc();});});
+  }
+  document.getElementById("s_add").addEventListener("click",function(){var a=itemsGet();a.push({d:"",q:"",u:"ft",p:"",t:true});
+    itemsStore(a);itemsRender();calc();var rows=document.querySelectorAll(".srow");if(rows.length)rows[rows.length-1].querySelector("input").focus();});
+
+  function siteCalc(){
+    if(itemsEl.value!==itemsShown)itemsRender();
+    var JT=document.getElementById("jobType").value||"road",on=JT!=="road";
+    var tb=function(t){return document.querySelector('.tab[data-t="'+t+'"]');};
+    tb("site").hidden=!on;["top","clay","stone"].forEach(function(t){var b=tb(t);if(b)b.hidden=JT==="site";});
+    document.getElementById("roadDims").hidden=JT==="site";
+    var rn=document.querySelector('[data-p="road"] [data-go]');if(rn){rn.dataset.go=JT==="site"?"site":"top";rn.textContent=JT==="site"?"Next: Site Work":"Next: Topsoil";}
+    var sn=document.querySelector('[data-p="stone"] [data-go]');if(sn){sn.dataset.go=JT==="both"?"site":"trucks";sn.textContent=JT==="both"?"Next: Site Work":"Next: Haul Off";}
+    var g=function(k){return on?n(k):0;},SL=[];
+    var acres=g("s_clrAc");
+    if(acres>0)SL.push({key:"clr",item:"Clearing & grubbing",desc:"Clearing & grubbing, "+f(acres,2)+" acres",qty:acres,unit:"acre",amt:acres*n("s_clrPr"),mat:false,grp:"site"});
+    var pl=g("s_padL"),pw=g("s_padW"),pa=pl*pw,ys=function(i){return pa*(i/12)/27;};
+    var top=ys(g("s_padTop")),cut=ys(g("s_padCut")),fillC=ys(g("s_padFill")),need=fillC*(1+n("s_shrink")/100);
+    var extra=Math.max(0,cut-need),imp=Math.max(0,need-cut);
+    var outLoose=(top+extra)*(1+n("s_padSw")/100),bx=n("box"),loads=bx>0?Math.ceil(outLoose/bx-1e-9):0,dump=loads*n("pDump");
+    if(imp>0)SL.push({key:"imp",item:"Fill dirt",desc:"Import fill dirt, delivered, "+f(imp)+" yd³",qty:imp,unit:"yd³",amt:imp*n("s_impPr"),mat:true,grp:"mat"});
+    if(dump>0)SL.push({key:"sdump",item:"Dump fees",desc:"Site haul-off dump fees, "+f(loads)+" loads",qty:loads,unit:"load",amt:dump,mat:false,grp:"haul"});
+    var tl=g("s_trL"),tw=n("s_trW")/12,td=n("s_trD"),trY=tl*tw*td/27,bedT=tl*tw*(n("s_trBed")/12)/27*n("stW")*(1+n("stC")/100);
+    if(bedT>0)SL.push({key:"bed",item:"Bedding stone",desc:"Trench bedding stone, "+f(bedT,1)+" tons",qty:bedT,unit:"ton",amt:bedT*n("pStone"),mat:true,grp:"mat"});
+    [["silt","s_silt","s_siltPr","Silt fence","Silt fence","ft"],["ent","s_ent","s_entPr","Construction entrance","Stone construction entrance","ea"],
+     ["inl","s_inl","s_inlPr","Inlet protection","Inlet protection","ea"],["seed","s_seed","s_seedPr","Seed & straw","Seed & straw","sq yd"]].forEach(function(r){
+      var q=g(r[1]);if(q>0)SL.push({key:r[0],item:r[3],desc:r[4]+", "+f(q)+" "+r[5],qty:q,unit:r[5],amt:q*n(r[2]),mat:true,grp:"site"});});
+    if(on)itemsGet().forEach(function(r,i){var q=num(r.q),p=num(r.p);if(q<=0&&p<=0)return;q=q>0?q:1;
+      SL.push({key:"it"+i+":"+(r.d||""),item:String(r.d||"Other item").slice(0,100),desc:(r.d||"Other item")+(q!==1||r.u?", "+f(q,2)+" "+(r.u||""):""),qty:q,unit:r.u||"ea",amt:q*p,mat:!!r.t,grp:"site"});});
+    var total=SL.reduce(function(s,x){return s+x.amt;},0);
+    set("o-sOut",f(top+extra),"yd³");set("o-sImp",f(imp),"yd³");set("o-sTr",f(trY),"yd³");document.getElementById("o-sTot").textContent=money(total);
+    document.getElementById("padres").innerHTML=pa>0?f(pa)+" sq ft pad · topsoil <b>"+f(top)+" yd³</b> · cut <b>"+f(cut)+" yd³</b> · fill needs <b>"+f(need)+" yd³</b> of dirt"+
+      (extra>0?" · <b>"+f(extra)+" yd³ extra</b> to haul":"")+(imp>0?" · <b>"+f(imp)+" yd³ short</b>, import it":"")+(loads?" · "+f(loads)+" truck loads out":""):"Enter the pad size to figure the dirt.";
+    document.getElementById("trres").innerHTML=tl>0?f(trY,1)+" yd³ dug · bedding stone <b>"+f(bedT,1)+" tons</b>":"Enter the trench length to figure it.";
+    document.getElementById("siteHead").hidden=!on;document.getElementById("siteTbl").hidden=!on;
+    document.getElementById("sitebody").innerHTML=(SL.length?SL.map(function(x){return "<tr><td style='white-space:normal'>"+esc(x.desc)+"</td><td>"+f(x.qty,1)+" "+esc(x.unit)+"</td><td>"+money(x.amt)+"</td></tr>";}).join(""):"<tr><td colspan='3'>No site work entered</td></tr>")+
+      "<tr class='sum'><td>Site work</td><td></td><td>"+money(total)+"</td></tr>";
+    return {total:total,lines:SL};
+  }
+
+  /* invoice */
+  var taxEl=document.getElementById("taxMap");
+  function taxGet(){try{return JSON.parse(taxEl.value||"{}")||{};}catch(e){return {};}}
+  var GRP={mob:"Mobilization",eq:"Excavation, grading & equipment",haul:"Hauling & disposal",mat:"Stone & materials",site:"Site work",pole:"Light pole bases"};
+  function invLines(){
+    if(!EST)return [];
+    var L=[];
+    if(EST.mob>0)L.push({key:"mob",item:"Mobilization",desc:"Mobilization: moving equipment to and from the job",qty:1,unit:"ls",amt:EST.mob,mat:false,grp:"mob"});
+    MACH.forEach(function(m){var st=S.mach[m.id];if(!st.on)return;var q=1,h=num(st.hrs),r=num(st.rate),a=q*h*r;if(a<=0)return;
+      L.push({key:"eq:"+m.id,item:m.name,desc:(q>1?f(q)+" × ":"")+m.name+", "+f(h,1)+" hr"+(q>1?" each":""),qty:q*h,unit:"hr",amt:a,mat:false,grp:"eq"});});
+    if(EST.dump>0)L.push({key:"dump",item:"Dump fees",desc:"Dump fees, "+f(EST.dLoads)+" loads",qty:EST.dLoads,unit:"load",amt:EST.dump,mat:false,grp:"haul"});
+    if(EST.baseT>0&&EST.pStone>0)L.push({key:"base",item:"Base stone",desc:"Base stone, "+f(EST.baseD,1)+" in",qty:EST.baseT,unit:"ton",amt:EST.baseT*EST.pStone,mat:true,grp:"mat"});
+    if(EST.finT>0&&EST.pStone>0)L.push({key:"fin",item:"Top stone",desc:"Top stone, "+f(EST.finD,1)+" in",qty:EST.finT,unit:"ton",amt:EST.finT*EST.pStone,mat:true,grp:"mat"});
+    if(EST.pole>0)L.push({key:"pole",item:"Light pole bases",desc:"Light pole bases, "+f(EST.holes)+" holes drilled and formed",qty:EST.holes||1,unit:"ea",amt:EST.pole,mat:false,grp:"pole"});
+    (EST.site&&EST.site.lines||[]).forEach(function(x){L.push(x);});
+    return L;
+  }
+  function pctv(id,d){var r=String(document.getElementById(id).value).trim();return r===""?d:num(r);}
+  function isoOf(d){return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2);}
+  function fmtDate(iso){var p=String(iso).split("-");return p.length===3?p[1]+"/"+p[2]+"/"+p[0]:iso;}
+  function addDays(iso,dd){var p=String(iso).split("-");if(p.length!==3)return iso;return isoOf(new Date(+p[0],+p[1]-1,+p[2]+dd));}
+  function m2(x){return "$"+(x||0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});}
+  function invData(){
+    var raw=invLines(),mk=pctv("invMk",0),pc=pctv("invPct",100),tm=taxGet(),detail=document.getElementById("invDetail").value!=="summary",lines=[];
+    var factor=(1+mk/100)*(pc/100);
+    if(detail)raw.forEach(function(x){lines.push({key:x.key,item:x.item,desc:x.desc,qty:x.qty,unit:x.unit,amt:x.amt*factor,tax:(x.key in tm)?!!tm[x.key]:x.mat});});
+    else{var by={},order=[];raw.forEach(function(x){if(!by[x.grp]){by[x.grp]={key:"g:"+x.grp,name:GRP[x.grp],amt:0,mat:x.grp==="mat"};order.push(x.grp);}by[x.grp].amt+=x.amt;});
+      order.forEach(function(gk){var x=by[gk];lines.push({key:x.key,item:x.name,desc:x.name,qty:1,unit:"ls",amt:x.amt*factor,tax:(x.key in tm)?!!tm[x.key]:x.mat});});}
+    lines.forEach(function(l){l.rate=l.qty?l.amt/l.qty:l.amt;});
+    var sub=0,taxable=0;lines.forEach(function(l){sub+=l.amt;if(l.tax)taxable+=l.amt;});
+    var tr=pctv("invTax",0),tax=taxable*tr/100;
+    var date=document.getElementById("invDate").value||isoOf(new Date()),terms=document.getElementById("invTerms").value,nd=+((terms.match(/\d+/)||[0])[0]);
+    var contract=raw.reduce(function(s,x){return s+x.amt;},0)*(1+mk/100);
+    return {lines:lines,sub:sub,tax:tax,tr:tr,total:sub+tax,date:date,due:addDays(date,nd),terms:terms,pc:pc,contract:contract,
+      no:document.getElementById("invNo").value.trim(),cust:document.getElementById("custName").value.trim(),addr:document.getElementById("custAddr").value.trim(),
+      loc:document.getElementById("jobLoc").value.trim()||S.job.place||"",job:S.job.name||""};
+  }
+  function br(t){return esc(t).replace(/\n/g,"<br>");}
+  function invRender(){
+    if(!EST)return;
+    var D=invData();
+    document.getElementById("taxList").innerHTML=D.lines.length?D.lines.map(function(l){
+      return '<button class="chip" data-tk="'+esc(l.key)+'" aria-pressed="'+(l.tax?"true":"false")+'"><span>'+esc(l.desc)+'</span><span>'+(l.tax?"Taxable":"Not taxable")+'</span></button>';}).join(""):
+      '<p class="note">No lines yet. Fill in the estimate first.</p>';
+    document.querySelectorAll("#taxList [data-tk]").forEach(function(b){b.addEventListener("click",function(){
+      var tm=taxGet();tm[b.dataset.tk]=b.getAttribute("aria-pressed")!=="true";taxEl.value=JSON.stringify(tm);S.v.taxMap=taxEl.value;save();invRender();});});
+    document.getElementById("invDoc").innerHTML=
+      '<div class="ih"><div><div class="ibiz">'+esc(biz.bizName||"")+'</div>'+(biz.bizAddr?'<div>'+br(biz.bizAddr)+'</div>':'')+
+      '<div>'+esc([biz.bizPhone,biz.bizEmail].filter(Boolean).join(" · "))+'</div></div>'+
+      '<div class="ititle">INVOICE<span>'+(D.no?"# "+esc(D.no):"# not set")+'</span></div></div>'+
+      '<div class="imeta"><div><b>Bill to</b><br>'+(D.cust?esc(D.cust):"<i>Customer name</i>")+(D.addr?'<br>'+br(D.addr):'')+'</div>'+
+      '<div><b>Job</b><br>'+(D.job?esc(D.job):"—")+(D.loc?'<br>'+esc(D.loc):'')+'</div>'+
+      '<div><b>Date</b> '+fmtDate(D.date)+'<br><b>Terms</b> '+esc(D.terms)+'<br><b>Due</b> '+fmtDate(D.due)+'</div></div>'+
+      '<table><thead><tr><th>Description</th><th>Qty</th><th>Unit</th><th>Rate</th><th>Amount</th><th>Tax</th></tr></thead><tbody>'+
+      (D.lines.map(function(l){return '<tr><td>'+esc(l.desc)+'</td><td>'+f(l.qty,2)+'</td><td>'+esc(l.unit)+'</td><td>'+m2(l.rate)+'</td><td>'+m2(l.amt)+'</td><td>'+(l.tax?"T":"")+'</td></tr>';}).join("")||
+       '<tr><td colspan="6">No lines yet</td></tr>')+
+      '</tbody></table><div class="itot"><span>Subtotal</span><span>'+m2(D.sub)+'</span><span>Sales tax'+(D.tr?" ("+f(D.tr,3)+"%)":"")+'</span><span>'+m2(D.tax)+'</span>'+
+      '<span class="g">Total due</span><span class="g">'+m2(D.total)+'</span></div>'+
+      (D.pc!==100?'<p class="inote">Progress billing: this invoice is '+f(D.pc,1)+'% of the contract amount of '+m2(D.contract)+' before tax.</p>':'')+
+      '<p class="inote">Thank you for your business.</p>';
+  }
+  document.getElementById("invNext").addEventListener("click",function(){
+    var el=document.getElementById("invNo"),nx=String(biz.nextInv||"1001").trim();el.value=nx;S.v.invNo=nx;
+    var m=nx.match(/^(.*?)(\d+)$/);biz.nextInv=m?m[1]+String(+m[2]+1).padStart(m[2].length,"0"):nx+"-2";
+    writeJ(BKEY,biz);document.getElementById("nextInv").value=biz.nextInv;save();invRender();});
+  document.getElementById("invPrint").addEventListener("click",function(){
+    var D=invData();if(!D.cust||!D.no){status("invStatus","Add the customer name and invoice number first.","bad");return;}
+    status("invStatus","","");try{window.print();}catch(e){status("invStatus","This phone wouldn't open printing.","bad");}});
+  function csvCell(v){v=String(v==null?"":v);return /[",\r\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
+  function toCsv(rows){return rows.map(function(r){return r.map(csvCell).join(",");}).join("\r\n")+"\r\n";}
+  function saveFile(name,text,type,sid){
+    var file;try{file=new File([text],name,{type:type});}catch(e){file=null;}
+    function dl(){try{var url=URL.createObjectURL(new Blob([text],{type:type})),a=document.createElement("a");a.href=url;a.download=name;
+      document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(url);a.remove();},2000);
+      status(sid,"Saved "+name+". Check your Downloads.","ok");}catch(e){status(sid,"This phone wouldn't save the file.","bad");}}
+    if(file&&navigator.canShare&&navigator.canShare({files:[file]})){navigator.share({files:[file],title:name}).then(function(){status(sid,"Sent "+name+".","ok");},
+      function(e){if(e&&e.name==="AbortError")status(sid,"Cancelled.","");else dl();});}
+    else dl();
+  }
+  document.getElementById("itemsCsv").addEventListener("click",function(){
+    var rows=[["Product/Service Name","Sales Description","Type","Sales Price / Rate","Taxable","Income Account"]],seen={};
+    function add(name,desc,mat,rate){if(!name||seen[name])return;seen[name]=1;
+      rows.push([name,desc,mat?"Non-inventory":"Service",rate?(Math.round(rate*100)/100):"",mat?"Yes":"No",mat?"Sales of Product Income":"Services"]);}
+    add("Mobilization","Moving equipment to and from the job",false);
+    MACH.forEach(function(m){add(m.name,m.name+", per hour",false,num(S.mach[m.id].rate));});
+    add("Dump fees","Dump fees",false,n("pDump"));
+    add("Base stone","Base stone, per ton",true,n("pStone"));add("Top stone","Top stone, per ton",true,n("pStone"));
+    if(true)add("Light pole bases","Light pole bases, drilled and formed",false);
+    add("Clearing & grubbing","Clearing & grubbing, per acre",false,n("s_clrPr"));add("Fill dirt","Import fill dirt, delivered, per yd³",true,n("s_impPr"));
+    add("Bedding stone","Trench bedding stone, per ton",true,n("pStone"));add("Silt fence","Silt fence, per ft",true,n("s_siltPr"));
+    add("Construction entrance","Stone construction entrance",true,n("s_entPr"));add("Inlet protection","Inlet protection",true,n("s_inlPr"));
+    add("Seed & straw","Seed & straw, per sq yd",true,n("s_seedPr"));
+    itemsGet().forEach(function(r){if(r.d)add(String(r.d).slice(0,100),r.d,!!r.t,num(r.p));});
+    Object.keys(GRP).forEach(function(k){if(k!=="pole"||true)add(GRP[k],GRP[k],k==="mat");});
+    saveFile((true?"EWE":"PCC")+"-QuickBooks-items.csv",toCsv(rows),"text/csv","invStatus");
+  });
+
   /* ---------- tabs ---------- */
   var tabs=[].slice.call(document.querySelectorAll(".tab")), panels=[].slice.call(document.querySelectorAll("[data-p]"));
   function show(t){tabs.forEach(function(b){var on=b.dataset.t===t;b.setAttribute("aria-selected",on?"true":"false");if(on)b.scrollIntoView({block:"nearest",inline:"center"});});
@@ -856,7 +1162,7 @@ img{max-width:100%}
   var clearArmed=false, rb=document.getElementById("reset");
   rb.addEventListener("click",function(){
     if(!clearArmed){clearArmed=true;rb.textContent="Tap again to clear";setTimeout(function(){clearArmed=false;rb.textContent="Clear job numbers";},3000);return;}
-    var clear=["len","wid","topD","clayD","baseD","finD","p1n","p2n","p3n","p4n","p1dep","p2dep","p3dep","p4dep","bitN"];
+    var clear=["len","wid","topD","clayD","baseD","finD","p1n","p2n","p3n","p4n","p1dep","p2dep","p3dep","p4dep","bitN","s_clrAc","s_padL","s_padW","s_padCut","s_padFill","s_trL","s_silt","s_ent","s_inl","s_seed","s_items","custName","custAddr","jobLoc","invNo","invDate","invPct","taxMap"];
     clear.forEach(function(k){var el=document.getElementById(k);el.value="";S.v[k]="";});
     MACH.forEach(function(m){S.mach[m.id].hrs="";document.getElementById("m-"+m.id+"-hrs").value="";});
     S.ex=false;save();calc();clearArmed=false;rb.textContent="Clear job numbers";});
