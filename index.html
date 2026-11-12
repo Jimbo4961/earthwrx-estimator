@@ -180,6 +180,9 @@ label.chk input{width:22px;height:22px}
   main .wrap{padding:0!important;max-width:none}
   .invdoc{border:0;padding:0;overflow:visible}
 }
+.topbtns{display:flex;gap:8px}
+.newbtn{min-height:44px;padding:0 14px;border-radius:8px;border:2px solid currentColor;background:transparent;color:inherit;font-family:var(--display);font-weight:800;letter-spacing:.08em;text-transform:uppercase;font-size:1rem;cursor:pointer}
+.newbtn:focus-visible{outline:3px solid currentColor;outline-offset:2px}
 </style>
 
 </head>
@@ -187,7 +190,7 @@ label.chk input{width:22px;height:22px}
 <header><div class="wrap">
   <h1 class="brand">EARTHWRX <span>EXCAVATING</span></h1>
   <div class="sub">ESTIMATING ROAD BUILD</div>
-  <div class="jobbar"><span class="jn" id="jobname"><em>Unsaved estimate</em></span><button class="savebtn" id="savetop">Save</button></div>
+  <div class="jobbar"><span class="jn" id="jobname"><em>Unsaved estimate</em></span><span class="topbtns"><button class="newbtn" id="newtop">New</button><button class="savebtn" id="savetop">Save</button></span></div>
 </div></header>
 
 <nav><div class="wrap"><div class="tabs" role="tablist" id="tabs">
@@ -856,10 +859,13 @@ label.chk input{width:22px;height:22px}
   document.getElementById("savetop").addEventListener("click",function(){doSave(false);});
   document.getElementById("saveCopy").addEventListener("click",function(){doSave(true);});
   var newArmed=false,nb=document.getElementById("newBtn");
+  var ntArmed=false,nt=document.getElementById("newtop");
+  nt.addEventListener("click",function(){if(!ntArmed){ntArmed=true;nt.textContent="Sure?";setTimeout(function(){ntArmed=false;nt.textContent="New";},3000);return;}
+    ntArmed=false;nt.textContent="New";newArmed=false;nb.click();nb.click();});
   nb.addEventListener("click",function(){
     if(!newArmed){newArmed=true;nb.textContent=S.job.id?"Tap again: start new":"Tap again: unsaved work is cleared";setTimeout(function(){newArmed=false;nb.textContent="Start new estimate";},3000);return;}
     newArmed=false;nb.textContent="Start new estimate";
-    var st=snapshot();
+    var st=snapshot();applyRates(st);
     ["len","wid","topD","clayD","baseD","finD","p1n","p2n","p3n","p4n","p1dep","p2dep","p3dep","p4dep","bitN","s_clrAc","s_padL","s_padW","s_padCut","s_padFill","s_trL","s_silt","s_ent","s_inl","s_seed","s_items","custName","custAddr","jobLoc","invNo","invDate","invPct","taxMap"].forEach(function(k){st.v[k]="";});
     MACH.forEach(function(m){st.mach[m.id].hrs="";});st.trips.forEach(function(t){t.mi="";});
     applyState(st,{id:null,name:"",place:"",notes:""});
@@ -883,7 +889,7 @@ label.chk input{width:22px;height:22px}
       if(!armed){armed=true;b.textContent="Tap again";setTimeout(function(){armed=false;b.textContent="Delete";},3000);return;}
       var id=b.dataset.del;jobsPut(jobsGet().filter(function(x){return x.id!==id;}));
       var dl=delGet();dl[id]=new Date().toISOString();writeLS(DKEY,dl);
-      if(S.job.id===id){S.job.id=null;save();showJobName();}renderJobs();status("saveStatus","Deleted.","ok");
+      if(S.job.id===id){S.job={id:null,name:"",place:"",notes:""};fillJob();save();}renderJobs();status("saveStatus","Deleted.","ok");
       if(ghReady())sync("delete");});});
   }
   renderJobs();
@@ -994,6 +1000,22 @@ label.chk input{width:22px;height:22px}
   Object.keys(BIZ_DEF).forEach(function(k){var el=document.getElementById(k);el.value=biz[k]||"";
     el.addEventListener("input",function(){biz[k]=el.value;writeJ(BKEY,biz);invRender();});});
 
+  /* my current rates: every new estimate starts from these */
+  var RKEY="ewe-rates",PRICE_KEYS=["pStone","pDump","pay","box","topSw","topW","claySw","clayW","stW","stC","s_clrPr","s_impPr","s_siltPr","s_entPr","s_inlPr","s_seedPr","s_shrink","s_padSw","s_trW","s_trD","s_trBed","invMk","invTax","invTerms",
+    "p1dia","p2dia","p3dia","p4dia","p1pr","p2pr","p3pr","p4pr","reach","extFee","crew","bitMin","fSet","fTear","fClean","formH","pConc"].filter(function(k){return document.getElementById(k);});
+  var R=readJ(RKEY,null);
+  if(!R){R={mach:{},trl:{},v:{}};MACH.forEach(function(m){R.mach[m.id]=S.mach[m.id].rate;});
+    TRL.forEach(function(t){R.trl[t.id]=Object.assign({},S.trl[t.id]);});PRICE_KEYS.forEach(function(k){R.v[k]=document.getElementById(k).value;});writeJ(RKEY,R);}
+  MACH.forEach(function(m){var el=document.getElementById("m-"+m.id+"-rate");el.addEventListener("input",function(){R.mach[m.id]=el.value;writeJ(RKEY,R);});});
+  TRL.forEach(function(t){["name","rate","fee"].forEach(function(k){var el=document.getElementById("t-"+t.id+"-"+k);if(!el)return;
+    el.addEventListener("input",function(){R.trl[t.id]=R.trl[t.id]||{};R.trl[t.id][k]=el.value;writeJ(RKEY,R);});});});
+  PRICE_KEYS.forEach(function(k){var el=document.getElementById(k);el.addEventListener("input",function(){R.v[k]=el.value;writeJ(RKEY,R);});});
+  function applyRates(st){
+    MACH.forEach(function(m){if(R.mach[m.id]!=null&&st.mach[m.id])st.mach[m.id].rate=R.mach[m.id];});
+    TRL.forEach(function(t){if(R.trl[t.id]&&st.trl[t.id])Object.keys(R.trl[t.id]).forEach(function(k){st.trl[t.id][k]=R.trl[t.id][k];});});
+    PRICE_KEYS.forEach(function(k){if(R.v[k]!=null)st.v[k]=R.v[k];});
+  }
+
   /* other site items */
   var itemsEl=document.getElementById("s_items"),itemsShown=null;
   function itemsGet(){try{var a=JSON.parse(itemsEl.value||"[]");return Array.isArray(a)?a:[];}catch(e){return [];}}
@@ -1034,7 +1056,7 @@ label.chk input{width:22px;height:22px}
     var pl=g("s_padL"),pw=g("s_padW"),pa=pl*pw,ys=function(i){return pa*(i/12)/27;};
     var top=ys(g("s_padTop")),cut=ys(g("s_padCut")),fillC=ys(g("s_padFill")),need=fillC*(1+n("s_shrink")/100);
     var extra=Math.max(0,cut-need),imp=Math.max(0,need-cut);
-    var outLoose=(top+extra)*(1+n("s_padSw")/100),bx=n("box"),loads=bx>0?Math.ceil(outLoose/bx-1e-9):0,dump=loads*n("pDump");
+    var outLoose=(top+extra)*(1+n("s_padSw")/100),bx=n("box"),py=n("pay"),tonsOut=top*n("topW")+extra*n("clayW"),loads=Math.ceil(Math.max(bx>0?outLoose/bx:0,py>0?tonsOut/py:0)-1e-9),dump=loads*n("pDump");
     if(imp>0)SL.push({key:"imp",item:"Fill dirt",desc:"Import fill dirt, delivered, "+f(imp)+" yd³",qty:imp,unit:"yd³",amt:imp*n("s_impPr"),mat:true,grp:"mat"});
     if(dump>0)SL.push({key:"sdump",item:"Dump fees",desc:"Site haul-off dump fees, "+f(loads)+" loads",qty:loads,unit:"load",amt:dump,mat:false,grp:"haul"});
     var tl=g("s_trL"),tw=n("s_trW")/12,td=n("s_trD"),trY=tl*tw*td/27,bedT=tl*tw*(n("s_trBed")/12)/27*n("stW")*(1+n("stC")/100);
@@ -1117,12 +1139,19 @@ label.chk input{width:22px;height:22px}
       '<p class="inote">Thank you for your business.</p>';
   }
   document.getElementById("invNext").addEventListener("click",function(){
-    var el=document.getElementById("invNo"),nx=String(biz.nextInv||"1001").trim();el.value=nx;S.v.invNo=nx;
-    var m=nx.match(/^(.*?)(\d+)$/);biz.nextInv=m?m[1]+String(+m[2]+1).padStart(m[2].length,"0"):nx+"-2";
-    writeJ(BKEY,biz);document.getElementById("nextInv").value=biz.nextInv;save();invRender();});
+    var el=document.getElementById("invNo"),nx=String(biz.nextInv||"1001").trim();el.value=nx;S.v.invNo=nx;save();invRender();
+    status("invStatus","Invoice # "+nx+" filled in. The next number counts up when you print or save this invoice.","ok");});
+  function bumpNext(no){var cur=String(biz.nextInv||"").trim();if(no!==cur)return;
+    var m=cur.match(/^(.*?)(\d+)$/);biz.nextInv=m?m[1]+String(+m[2]+1).padStart(m[2].length,"0"):cur+"-2";
+    writeJ(BKEY,biz);document.getElementById("nextInv").value=biz.nextInv;}
+  var dupOk="";
   document.getElementById("invPrint").addEventListener("click",function(){
     var D=invData();if(!D.cust||!D.no){status("invStatus","Add the customer name and invoice number first.","bad");return;}
-    status("invStatus","","");try{window.print();}catch(e){status("invStatus","This phone wouldn't open printing.","bad");}});
+    var dup=jobsGet().filter(function(j){return j.id!==S.job.id&&j.state&&j.state.v&&String(j.state.v.invNo||"").trim()===D.no;})[0];
+    if(dup&&dupOk!==D.no){dupOk=D.no;status("invStatus","Invoice # "+D.no+" is already used on the job \""+(dup.name||"Untitled")+"\". Change the number, or tap Print again to use it anyway.","bad");return;}
+    dupOk="";bumpNext(D.no);
+    status("invStatus",S.job.id?"":"Tip: tap Save so this invoice number stays with the job.",S.job.id?"":"ok");
+    try{window.print();}catch(e){status("invStatus","This phone wouldn't open printing.","bad");}});
   function csvCell(v){v=String(v==null?"":v);return /[",\r\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
   function toCsv(rows){return rows.map(function(r){return r.map(csvCell).join(",");}).join("\r\n")+"\r\n";}
   function saveFile(name,text,type,sid){
